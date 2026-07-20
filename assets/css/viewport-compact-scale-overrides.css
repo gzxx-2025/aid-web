@@ -1,0 +1,275 @@
+/**
+ * 与 utils/viewportCompactScale.ts / plugins/viewport-compact-scale.client.ts 配合：根节点 zoom 0.75 时，
+ * 可通过页面右下角「界面缩放」开关或 NUXT_PUBLIC_VIEWPORT_COMPACT_SCALE=0 关闭。
+ *
+ * 依赖 document.documentElement 上的 data-viewport-compact-scale="1"。
+ */
+
+html[data-viewport-compact-scale='1'] body,
+html[data-viewport-compact-scale='1'] #app {
+  min-height: calc(100vh / 0.75) !important;
+}
+
+html[data-viewport-compact-scale='1'].app-shell-create body {
+  min-height: calc(100vh / 0.75) !important;
+}
+
+html[data-viewport-compact-scale='1'].app-shell-login body {
+  min-height: calc(100vh / 0.75) !important;
+}
+
+html[data-viewport-compact-scale='1'] .home-page {
+  height: calc(100vh / 0.75) !important;
+  min-height: calc(100vh / 0.75) !important;
+}
+
+html[data-viewport-compact-scale='1'] .create-page {
+  height: calc(100vh / 0.75) !important;
+  min-height: calc(100vh / 0.75) !important;
+}
+
+/* 与首页一致：主区占满壳层高度，侧栏随 flex stretch 拉满，不再扣减侧栏宽度 */
+html[data-viewport-compact-scale='1'] .create-page .main-layout {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+html[data-viewport-compact-scale='1'] .login-page {
+  min-height: calc(100vh / 0.75) !important;
+}
+
+html[data-viewport-compact-scale='1'] .home-sub-page .assets-library-figma__inner,
+html[data-viewport-compact-scale='1'] .home-sub-page .works-library-figma__inner {
+  min-height: 0 !important;
+}
+
+html[data-viewport-compact-scale='1'] .home-sub-page.assets-library-figma .assets-lib-grid-panel {
+  min-height: 0 !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.edit-scene-image-modal {
+  align-items: stretch !important;
+  justify-content: stretch !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.edit-scene-image-modal .ant-modal {
+  width: 100% !important;
+  max-width: none !important;
+  height: calc(100vh / 0.75) !important;
+  max-height: calc(100vh / 0.75) !important;
+  margin: 0 !important;
+  top: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.edit-scene-image-modal .ant-modal-content {
+  height: calc(100vh / 0.75) !important;
+  max-height: calc(100vh / 0.75) !important;
+  border-radius: 0 !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.edit-scene-image-modal .edit-scene-image-container {
+  height: calc(100vh / 0.75 - 8px) !important;
+  max-height: calc(100vh / 0.75) !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.touch-edit-modal-wrap {
+  align-items: stretch !important;
+  justify-content: stretch !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.touch-edit-modal-wrap .ant-modal {
+  width: 100% !important;
+  max-width: none !important;
+  height: calc(100vh / 0.75) !important;
+  max-height: calc(100vh / 0.75) !important;
+  margin: 0 !important;
+  top: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.touch-edit-modal-wrap .ant-modal-content {
+  height: calc(100vh / 0.75) !important;
+  max-height: calc(100vh / 0.75) !important;
+  border-radius: 0 !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.touch-edit-modal-wrap .touch-edit {
+  height: calc(100vh / 0.75 - 24px) !important;
+  max-height: calc(100vh / 0.75 - 16px) !important;
+}
+
+/* 导入参考图 / 选择场景：zoom 0.75 且矮屏时，列表区按补偿视口高度撑满 */
+@media (max-height: 900px) {
+html[data-viewport-compact-scale='1'] {
+  --cf-c-picker-edge-zoom: 24px;
+  --cf-c-picker-viewport-h-zoom: calc(100vh / 0.75 - var(--cf-c-picker-edge-zoom));
+  --cf-c-scene-picker-list-h-zoom: calc(var(--cf-c-picker-viewport-h-zoom) - 176px);
+  --cf-c-asset-picker-list-h-zoom: calc(var(--cf-c-picker-viewport-h-zoom) - 168px);
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.select-scene-image-modal-wrap,
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal:has(.ant-modal.select-scene-image-modal) {
+  align-items: stretch !important;
+  justify-content: center !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  box-sizing: border-box !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.select-scene-image-modal-wrap .ant-modal,
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal:has(.ant-modal.select-scene-image-modal) .ant-modal {
+  height: var(--cf-c-picker-viewport-h-zoom) !important;
+  max-height: var(--cf-c-picker-viewport-h-zoom) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding-bottom: 0 !important;
+  top: 12px !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal.select-scene-image-modal .ant-modal-content {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal.select-scene-image-modal .ant-modal-body {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal.select-scene-image-modal .import-container {
+  flex: none !important;
+  height: var(--cf-c-scene-picker-list-h-zoom) !important;
+  min-height: var(--cf-c-scene-picker-list-h-zoom) !important;
+  max-height: var(--cf-c-scene-picker-list-h-zoom) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal.select-scene-image-modal .content-area {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap {
+  align-items: stretch !important;
+  justify-content: center !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  box-sizing: border-box !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal {
+  height: var(--cf-c-picker-viewport-h-zoom) !important;
+  max-height: var(--cf-c-picker-viewport-h-zoom) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding-bottom: 0 !important;
+  top: 12px !important;
+}
+
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal-content,
+html[data-viewport-compact-scale='1'] .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal-body,
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-inner {
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-body-shell {
+  flex: none !important;
+  height: var(--cf-c-asset-picker-list-h-zoom) !important;
+  min-height: var(--cf-c-asset-picker-list-h-zoom) !important;
+  max-height: var(--cf-c-asset-picker-list-h-zoom) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-content-row {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-sidebar {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: none !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-sidebar-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-sidebar-scroll::-webkit-scrollbar {
+  width: 0 !important;
+  background: transparent !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-sidebar-scroll:hover {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(120, 140, 170, 0.45) transparent !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-sidebar-scroll:hover::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(120, 140, 170, 0.45) !important;
+  border-radius: 4px !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-main {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html[data-viewport-compact-scale='1'] .select-asset-image-modal-wrap .saim-main-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+}
+}
+
+html[data-viewport-compact-scale='1'] .ant-select-dropdown,
+html[data-viewport-compact-scale='1'] .ant-popover,
+html[data-viewport-compact-scale='1'] .ant-dropdown,
+html[data-viewport-compact-scale='1'] .ant-tooltip,
+html[data-viewport-compact-scale='1'] .ant-picker-dropdown {
+  zoom: calc(1 / 0.75);
+}
+
+html[data-viewport-compact-scale='1'] .options-list[style*='position: fixed'],
+html[data-viewport-compact-scale='1'] .enhance-mode-panel[style*='position: fixed'] {
+  zoom: calc(1 / 0.75);
+}
+
+html[data-viewport-compact-scale='1'] body {
+  overflow-x: hidden;
+}
+
+html[data-viewport-compact-scale='1'] #__nuxt,
+html[data-viewport-compact-scale='1'] #app {
+  min-height: calc(100vh / 0.75) !important;
+}

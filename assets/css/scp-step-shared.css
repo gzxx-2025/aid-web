@@ -1,0 +1,134 @@
+/**
+ * 创作流程：场景角色道具（第三步）— 与 storyboard-step-shared 对齐的字号 / 按钮 / 列表样式
+ * 根节点需带 class：create-step-scp
+ *
+ * 字号约定：正文最小 12px（0.75rem @16px 根字号）；列表行操作按钮 12px；顶栏主按钮 0.8rem。
+ */
+
+html.app-shell-create .create-step-scp {
+  --scp-card-width: 20rem;
+  --scp-card-grid-min: 26.75rem;
+  --scp-image-body-height: 11rem;
+}
+
+/* ---------- 顶栏：对齐分镜脚本 .storyboard-toolbar-right ---------- */
+html.app-shell-create .create-step-scp .scp-topbar__right .ant-btn {
+  height: 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+html.app-shell-create .create-step-scp .scp-topbar-batch-btn.ant-btn-primary,
+html.app-shell-create .create-step-scp .scp-topbar-batch-btn.ant-btn-primary:hover,
+html.app-shell-create .create-step-scp .scp-topbar-batch-btn.ant-btn-primary:active {
+  background: #4ae7fd !important;
+  border: none !important;
+  color: #121212 !important;
+  transform: none !important;
+}
+
+html.app-shell-create .create-step-scp .scp-topbar-batch-btn.ant-btn-primary img {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- Tab 药丸：对齐分镜列表/卡片切换 ---------- */
+html.app-shell-create .create-step-scp .scp-tabs {
+  height: 28px;
+}
+
+html.app-shell-create .create-step-scp .scp-tab {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ---------- 列表行标题：对齐 .storyboard-list-title ---------- */
+html.app-shell-create .create-step-scp .scene-card-title-prefix,
+html.app-shell-create .create-step-scp .scene-card-title-editable,
+html.app-shell-create .create-step-scp .character-card-title-prefix,
+html.app-shell-create .create-step-scp .character-card-title-editable,
+html.app-shell-create .create-step-scp .prop-card-title-prefix,
+html.app-shell-create .create-step-scp .prop-card-title-editable {
+  font-size: 0.875rem;
+  line-height: 1.375;
+}
+
+/* ---------- 列表行操作按钮：对齐 .storyboard-list-actions ---------- */
+html.app-shell-create .create-step-scp .scene-card-actions-header .ant-btn,
+html.app-shell-create .create-step-scp .character-card-actions-header .ant-btn,
+html.app-shell-create .create-step-scp .prop-card-actions-header .ant-btn {
+  height: 22px;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+  border-color: #2f3949 !important;
+  background: transparent !important;
+  color: #dbe7f4;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ---------- 图片卡片底部操作：对齐 .asset-action-footer ---------- */
+html.app-shell-create .create-step-scp .asset-action-footer .ant-btn {
+  padding: 0 8px;
+  border-radius: 6px;
+  border: none;
+  background: none !important;
+  color: rgba(230, 237, 243, 0.9);
+  font-size: 14px;
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  width: 33%;
+  gap: 6px;
+}
+
+html.app-shell-create .create-step-scp .asset-action-footer .ant-btn:hover {
+  background: rgba(74, 231, 253, 0.16);
+  color: #e9fbff;
+}
+
+html.app-shell-create .create-step-scp .asset-action-footer .ant-btn .anticon {
+  font-size: 12px;
+}
+
+html.app-shell-create .create-step-scp .asset-action-footer .footer-action-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* ---------- 卡片定宽 / 图片区高度：rem 随根字号缩放 ---------- */
+html.app-shell-create .create-step-scp .scene-card-manual,
+html.app-shell-create .create-step-scp .character-card-manual,
+html.app-shell-create .create-step-scp .prop-card-manual {
+  width: var(--scp-card-width);
+}
+
+html.app-shell-create .create-step-scp .scene-cards-auto {
+  grid-template-columns: repeat(auto-fill, minmax(var(--scp-card-grid-min), 1fr));
+}
+
+html.app-shell-create .create-step-scp .character-cards-auto,
+html.app-shell-create .create-step-scp .prop-cards-auto {
+  grid-template-columns: repeat(auto-fill, minmax(var(--scp-card-grid-min), 1fr));
+}
+
+html.app-shell-create .create-step-scp .form-image-card {
+  width: var(--scp-card-width);
+}
+
+html.app-shell-create .create-step-scp .form-image-card.scene-card-auto {
+  width: 19.5rem;
+}
+
+html.app-shell-create .create-step-scp .asset-visual-generating-block {
+  max-width: var(--scp-card-grid-min);
+}
+
+html.app-shell-create .create-step-scp .scene-card-image-body,
+html.app-shell-create .create-step-scp .character-form-images-list .scene-card-image-body {
+  height: var(--scp-image-body-height);
+}

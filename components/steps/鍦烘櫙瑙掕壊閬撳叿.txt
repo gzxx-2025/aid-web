@@ -1,0 +1,362 @@
+问题解答：
+
+
+1、先把接口文档编辑场景、角色道具详情改名(写清楚哪个是详情的接口)
+/api/user/asset/rps/update-main   修改内容的
+
+额外说明：
+修改形态的名字、描述：/api/user/asset/rps/update-form
+修改形态图列表的某一条数据：/api/user/asset/rps/form-image/update
+
+3 编辑弹窗里面生成图片时调用模型以后同步调用SSE接口，右侧同步展示生成状态，如果sse成功以后列表则展示出生成的图片
+
+其他的了
+2.生成一个白底图，通过白底图生成三视图，可以对生成的图片进行编辑（角色。道具），场景四宫格拆分不需要，只保留多机位，touchu edit功能保留
+
+
+
+
+
+
+# RPS 资产模块接口总结
+
+## 一、模块分层
+当前 RPS 资产模块已经按三层模型拆分：
+
+1. 主资产层
+   - 表：`aid_role_prop_scene`
+   - 对应：角色 / 场景 / 道具本体
+
+2. 形态层
+   - 表：`aid_role_prop_scene_form`
+   - 对应：某个主资产下的具体形态定义
+
+3. 形态图层
+   - 表：`aid_role_prop_scene_form_image`
+   - 对应：某个形态下的图片实例
+
+## 二、接口分层总览
+
+### 1. 主资产层接口
+| 接口 | 功能 | 操作表 |
+|---|---|---|
+| `POST /api/user/asset/rps/create` | 创建主资产 | `aid_role_prop_scene`，并自动初始化一条默认 `form` |
+| `POST /api/user/asset/rps/update-main` | 编辑主资产 | 仅 `aid_role_prop_scene` |
+| `POST /api/user/asset/rps/list` | 查询主资产列表 | 主表 + form + form_image（仅返回 `is_use=1` 图片） |
+| `POST /api/user/asset/rps/delete` | 删除主资产 | 主表 + 所有关联 form + 所有关联 form_image |
+
+### 2. 形态层接口
+| 接口 | 功能 | 操作表 |
+|---|---|---|
+| `POST /api/user/asset/rps/form/create` | 创建形态 | `aid_role_prop_scene_form` |
+| `POST /api/user/asset/rps/update-form` | 编辑形态 | `aid_role_prop_scene_form` |
+| `POST /api/user/asset/rps/form/list` | 查询形态列表 | form + form_image（完整图片集合） |
+| `POST /api/user/asset/rps/delete`（传 `formId`） | 删除形态 | 指定 form + 该 form 下所有 form_image |
+
+### 3. 形态图层接口
+| 接口 | 功能 | 操作表 |
+|---|---|---|
+| `POST /api/user/asset/rps/form-image/create` | 创建形态图 | `aid_role_prop_scene_form_image` |
+| `POST /api/user/asset/rps/form-image/update` | 编辑形态图 | `aid_role_prop_scene_form_image` |
+| `POST /api/user/asset/rps/form-image/list` | 查询形态图列表 | `aid_role_prop_scene_form_image`，并附带归属信息 |
+| `POST /api/user/asset/rps/form-image/delete` | 删除形态图 | `aid_role_prop_scene_form_image` |
+
+### 4. 使用中状态接口
+| 接口 | 功能 | 操作表 |
+|---|---|---|
+| `POST /api/user/asset/rps/form/use` | 将图片加入使用中集合 | `aid_role_prop_scene_form_image` |
+| `POST /api/user/asset/rps/form/unuse` | 将图片移出使用中集合 | `aid_role_prop_scene_form_image` |
+
+### 5. AI 生成相关接口
+| 接口 | 功能 | 操作表 |
+|---|---|---|
+| `POST /api/user/asset/extract/form/generate` | 生成形态提示词/形态定义 | `aid_role_prop_scene_form` |
+| `POST /api/user/asset/extract/form/generate-image` | 生成形态图 | `aid_role_prop_scene_form_image` |
+
+## 三、各层接口职责说明
+
+## 1. 主资产层
+
+### `POST /api/user/asset/rps/create`
+功能：
+- 创建主资产，例如角色、场景、道具
+- 创建成功后自动初始化至少一条默认形态 `form`
+
+特点：
+- 只负责主资产初始化
+- 不会直接创建图片
+- 图片需要后续通过图片接口单独创建，或通过 AI 生图接口生成
+
+### `POST /api/user/asset/rps/update-main`
+功能：
+- 编辑主资产本身信息
+
+当前只更新主表，不做级联：
+- 不更新 `form`
+- 不更新 `form_image`
+
+可更新字段通常包括：
+- `name`
+- `aliasesName`
+- `introduction`
+- `gender`
+- `ageRange`
+- `roleLevel`
+- `profileData`
+- `expectedAppearances`
+- `summary`
+
+### `POST /api/user/asset/rps/list`
+功能：
+- 查询主资产列表
+
+查询视角：
+- 主资产视角
+
+返回结构：
+- 主资产列表
+- 每个主资产下带 `forms[]`
+- 每个 `form` 下只带 `is_use=1` 的图片
+
+适用场景：
+- 主资产管理页
+- 角色/场景/道具总览页
+- 只关心“当前被使用的形态图”展示
+
+性能策略：
+- 已按批量查询 + 内存组装实现
+- 避免 N+1
+
+### `POST /api/user/asset/rps/delete`
+功能：
+- 删除主资产，或删除某个形态
+
+规则：
+- 不传 `formId`
+  - 删除主资产
+  - 同时删除所有 form
+  - 同时删除所有 form_image
+
+- 传 `formId`
+  - 删除指定 form
+  - 同时删除该 form 下所有 form_image
+  - 不删除主资产
+
+## 2. 形态层
+
+### `POST /api/user/asset/rps/form/create`
+功能：
+- 创建形态
+
+例如：
+- 角色1
+- 角色1_战斗形态
+- 场景_白天版
+- 道具_破损版
+
+特点：
+- 只创建 form
+- 不自动创建图片
+- 不自动生图
+
+### `POST /api/user/asset/rps/update-form`
+功能：
+- 编辑某个形态定义
+
+只操作：
+- `aid_role_prop_scene_form`
+
+通常可修改：
+- `name`
+- `changeReason`
+- `promptText`
+
+不会修改：
+- 主资产
+- 图片表
+
+### `POST /api/user/asset/rps/form/list`
+功能：
+- 查询形态列表
+
+查询视角：
+- 形态视角
+
+常见查询条件：
+- `projectId`
+- `episodeId`
+- `assetType`
+- `assetId`
+
+返回结构：
+- form 列表
+- 每个 form 下包含完整 `images[]`
+
+和 `/list` 的区别：
+- `/list` 只返回使用中的图片
+- `/form/list` 返回某个形态下的完整图片集合
+
+适用场景：
+- 形态管理页
+- 形态详情页
+- 查看某个角色/场景/道具所有形态
+
+## 3. 形态图层
+
+### `POST /api/user/asset/rps/form-image/create`
+功能：
+- 创建形态图实例
+
+典型用途：
+- 用户上传图片
+- 官方导入图片
+
+特点：
+- 只新增一条 `form_image`
+- 不改主资产
+- 不改 form
+
+### `POST /api/user/asset/rps/form-image/update`
+功能：
+- 编辑形态图实例
+
+只操作：
+- `aid_role_prop_scene_form_image`
+
+通常可修改：
+- `name`
+- `imageUrl`
+- `descriptionIndex`
+- `promptSnapshot`
+- `referenceImages`
+
+不会修改：
+- 主资产
+- form
+
+### `POST /api/user/asset/rps/form-image/list`
+功能：
+- 查询形态图列表
+
+查询视角：
+- 图片视角
+
+查询条件支持：
+- `formId`
+- `projectId`
+- `episodeId`
+- `assetId`
+- `assetType`
+- `isUse`
+
+规则：
+- `formId` 不为空：只查该 form 下图片
+- `formId` 为空：必须传 `assetType`，用于限制范围
+
+返回内容：
+- 图片自身信息
+- 同时带归属信息：
+  - `formId`
+  - `formName`
+  - `assetId`
+  - `assetName`
+  - `assetType`
+  - `projectId`
+  - `episodeId`
+
+适用场景：
+- 图片管理页
+- 某个类型下的图库视角
+- 只看图片，不从主资产或 form 视角切入
+
+### `POST /api/user/asset/rps/form-image/delete`
+功能：
+- 删除单张图片实例
+
+特点：
+- 只删图片
+- 不删 form
+- 不删主资产
+
+## 四、使用中状态规则
+
+### `POST /api/user/asset/rps/form/use`
+功能：
+- 将某张图片加入“使用中集合”
+
+当前语义：
+- 多选
+- 只设置当前图片 `is_use=1`
+- 不会清空同一个 form 下其他图片
+
+### `POST /api/user/asset/rps/form/unuse`
+功能：
+- 将某张图片移出“使用中集合”
+
+规则：
+- 只取消当前图片
+- 但必须保证该 form 下至少保留 1 张使用中的图片
+- 如果当前只剩最后一张使用中的图，则不允许取消
+
+## 五、AI 生成链路说明
+
+### `POST /api/user/asset/extract/form/generate`
+功能：
+- 生成形态定义 / 提示词内容
+- 结果写入 `aid_role_prop_scene_form.promptText`
+
+说明：
+- 角色提示词支持多条 descriptions
+- 当前规范化后存储在 `promptText` 中
+
+### `POST /api/user/asset/extract/form/generate-image`
+功能：
+- 基于 form 的提示词生成形态图
+- 图片结果写入 `aid_role_prop_scene_form_image`
+
+说明：
+- 自动生图默认使用第一条主描述
+- 不再把整个 JSON 原样下发给模型
+- 已对齐 `description_index=0`
+
+## 六、已废弃接口
+
+### `POST /api/user/asset/rps/update`
+状态：
+- 已删除 / 已下线
+
+原因：
+- 旧接口把主资产、形态、图片更新混在一起
+- 不符合当前三层模型
+- 现已由：
+  - `update-main`
+  - `update-form`
+  - `form-image/update`
+  分层承接
+
+## 七、当前接口设计原则
+
+当前接口整体遵循以下规则：
+
+1. 主资产、形态、图片三层独立维护
+2. 不再保留级联更新接口
+3. 主资产创建时不直接创建图片
+4. 查询接口按视角区分
+   - 主资产视角：`/list`
+   - 形态视角：`/form/list`
+   - 图片视角：`/form-image/list`
+5. 使用中状态为多选集合，不再是唯一主图
+6. 删除接口支持分层删除
+   - 删主资产
+   - 删形态
+   - 删图片
+
+## 八、一句话总结
+
+当前 RPS 模块接口已经整理为：
+
+- 主资产层接口：管理角色/场景/道具本体
+- 形态层接口：管理某个资产下的形态定义
+- 形态图层接口：管理某个形态下的图片实例
+- 使用中接口：管理图片是否加入使用中集合
+- AI 生成接口：生成形态提示词和形态图

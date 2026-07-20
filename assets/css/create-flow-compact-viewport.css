@@ -1,0 +1,934 @@
+/**
+ * 创作流程 + 首页壳（html.app-shell-create）弹窗 — 小分辨率统一适配
+ *
+ * 触发条件：宽 ≤1600 且 高 ≤900；高 ≤768 为第二档。
+ *
+ * 大屏弹窗样式保持各组件 scoped 原样，仅在此文件内覆盖。
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Tier 1：小分辨率弹窗 token                                                     */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 1600px) and (max-height: 900px) {
+  html.app-shell-create {
+    --cf-c-modal-edge: 12px;
+    --cf-c-modal-w: calc(100vw - 24px);
+    --cf-c-modal-w-xl: min(1100px, calc(100vw - 24px));
+    --cf-c-modal-w-lg: min(1000px, calc(100vw - 24px));
+    --cf-c-modal-w-md: min(860px, calc(100vw - 24px));
+    --cf-c-modal-w-sm: min(520px, calc(100vw - 24px));
+    --cf-c-modal-w-xs: min(472px, calc(100vw - 24px));
+    --cf-c-modal-shell-h: min(620px, calc(100dvh - 24px));
+    --cf-c-modal-header-h: 48px;
+    --cf-c-modal-title-fs: 15px;
+    --cf-c-modal-body-fs: 13px;
+    --cf-c-modal-btn-h: 30px;
+    --cf-c-modal-btn-fs: 13px;
+    --cf-c-modal-pad: 14px;
+    --cf-c-modal-pad-lg: 16px;
+    --cf-c-modal-gap: 10px;
+    --cf-c-picker-edge: calc(var(--cf-c-modal-edge) * 2);
+    --cf-c-picker-viewport-h: calc(100dvh - var(--cf-c-picker-edge));
+    /* 弹窗内标题 + Tab + 底栏占用（选择场景 / 导入参考图） */
+    --cf-c-scene-picker-chrome: 176px;
+    --cf-c-asset-picker-chrome: 168px;
+    --cf-c-scene-picker-list-h: calc(var(--cf-c-picker-viewport-h) - var(--cf-c-scene-picker-chrome));
+    --cf-c-asset-picker-list-h: calc(var(--cf-c-picker-viewport-h) - var(--cf-c-asset-picker-chrome));
+  }
+
+  /* ---------- 全屏类弹窗（编辑图/视频/涂抹）---------- */
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.edit-scene-image-modal,
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.touch-edit-modal-wrap {
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.edit-scene-image-modal .ant-modal,
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.touch-edit-modal-wrap .ant-modal {
+    width: 100% !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    top: 0 !important;
+    padding: 0 !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.edit-scene-image-modal .ant-modal-content,
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.touch-edit-modal-wrap .ant-modal-content {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.edit-scene-image-modal .edit-scene-image-container {
+    height: calc(100dvh - 8px) !important;
+    max-height: 100dvh !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.touch-edit-modal-wrap .touch-edit {
+    height: calc(100dvh - 24px) !important;
+    max-height: calc(100dvh - 16px) !important;
+  }
+
+  /* ---------- 居中弹窗：宽度 / 最大高度 ---------- */
+  html.app-shell-create .ant-modal-wrap.create-flow-modal:not(.edit-scene-image-modal):not(.touch-edit-modal-wrap) .ant-modal {
+    top: var(--cf-c-modal-edge) !important;
+    padding-bottom: var(--cf-c-modal-edge);
+    max-height: calc(100dvh - var(--cf-c-modal-edge) * 2) !important;
+  }
+
+  /* 默认大弹窗（1100–1200） */
+  html.app-shell-create
+    .ant-modal-wrap.create-flow-modal:not(.edit-scene-image-modal):not(.touch-edit-modal-wrap):not(
+      .music-picker-wrap
+    ):not(.voice-timbre-picker-wrap):not(.speaker-role-picker-wrap)
+    .ant-modal {
+    width: var(--cf-c-modal-w-xl) !important;
+    max-width: var(--cf-c-modal-w-xl) !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.music-picker-wrap .ant-modal,
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.voice-timbre-picker-wrap .ant-modal {
+    width: var(--cf-c-modal-w-md) !important;
+    max-width: var(--cf-c-modal-w-md) !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.speaker-role-picker-wrap .ant-modal {
+    width: var(--cf-c-modal-w-xs) !important;
+    max-width: var(--cf-c-modal-w-xs) !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal:not(.edit-scene-image-modal):not(.touch-edit-modal-wrap) .ant-modal-content {
+    max-height: calc(100dvh - var(--cf-c-modal-edge) * 2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 外层 body 不滚动，避免底部按钮被整体滚出视口；中间区域各自滚动 */
+  html.app-shell-create .ant-modal-wrap.create-flow-modal:not(.edit-scene-image-modal):not(.touch-edit-modal-wrap) .ant-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    font-size: var(--cf-c-modal-body-fs);
+  }
+
+  /* 通用：弹窗内 Ant 按钮与标题 */
+  html.app-shell-create .create-flow-modal .ant-modal-header {
+    padding: var(--cf-c-modal-pad) var(--cf-c-modal-pad-lg) !important;
+    min-height: var(--cf-c-modal-header-h);
+    flex-shrink: 0;
+  }
+
+  html.app-shell-create .create-flow-modal .ant-modal-title {
+    font-size: var(--cf-c-modal-title-fs) !important;
+    line-height: 1.35 !important;
+  }
+
+  html.app-shell-create .create-flow-modal .ant-modal-footer {
+    padding: var(--cf-c-modal-pad) var(--cf-c-modal-pad-lg) !important;
+    flex-shrink: 0;
+  }
+
+  /* ---------- 自定义头尾（footer 在 body 内）的弹窗 ---------- */
+  html.app-shell-create .ant-modal.import-script-modal .modal-header,
+  html.app-shell-create .ant-modal.import-script-modal .modal-footer,
+  html.app-shell-create .ant-modal.select-scene-image-modal .modal-header,
+  html.app-shell-create .ant-modal.select-scene-image-modal .modal-footer,
+  html.app-shell-create .scene-setting-modal .ant-modal-header,
+  html.app-shell-create .scene-setting-modal .modal-footer,
+  html.app-shell-create .storyboard-script-modal .ant-modal-header,
+  html.app-shell-create .storyboard-script-modal .modal-footer,
+  html.app-shell-create .import-scene-image-modal .ant-modal-header,
+  html.app-shell-create .import-scene-image-modal .import-tab-bar,
+  html.app-shell-create .import-scene-image-modal .import-footer,
+  html.app-shell-create .multi-angle-modal .ant-modal-header,
+  html.app-shell-create .select-asset-image-modal-wrap .saim-header,
+  html.app-shell-create .select-asset-image-modal-wrap .saim-footer,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-header,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-footer,
+  html.app-shell-create .batch-regenerate-dubbing-wrap .brdm-header,
+  html.app-shell-create .batch-regenerate-dubbing-wrap .brdm-toolbar,
+  html.app-shell-create .batch-regenerate-dubbing-wrap .brdm-footer,
+  html.app-shell-create .create-first-step-wrap .modal-title,
+  html.app-shell-create .create-first-step-wrap .modal-actions,
+  html.app-shell-create .batch-generate-asset-modal .bgam-header,
+  html.app-shell-create .batch-generate-asset-modal .bgam-footer {
+    flex-shrink: 0;
+  }
+
+  html.app-shell-create .ant-modal.import-script-modal .import-container,
+  html.app-shell-create .select-asset-image-modal-wrap .saim-inner,
+  html.app-shell-create .select-asset-image-modal-wrap .content_box,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-inner,
+  html.app-shell-create .batch-regenerate-dubbing-wrap .brdm,
+  html.app-shell-create .create-first-step-wrap .modal-shell,
+  html.app-shell-create .batch-generate-asset-modal .bgam,
+  html.app-shell-create .agent-picker-modal .picker-shell,
+  html.app-shell-create .import-scene-image-modal .import-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: 100% !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  html.app-shell-create .ant-modal.import-script-modal .import-container {
+    flex-direction: row;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-body,
+  html.app-shell-create .batch-regenerate-dubbing-wrap .brdm-body,
+  html.app-shell-create .create-first-step-wrap .modal-body,
+  html.app-shell-create .select-asset-image-modal-wrap .saim-content-row {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.app-shell-create .ant-modal.import-script-modal .main-content,
+  html.app-shell-create .ant-modal.import-script-modal .content-area,
+  html.app-shell-create .ant-modal.select-scene-image-modal .content-area,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-grid-scroll,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-settings-scroll,
+  html.app-shell-create .batch-regenerate-dubbing-wrap .brdm-body,
+  html.app-shell-create .agent-picker-modal .picker-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  html.app-shell-create .agent-picker-modal .picker-scroll::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  html.app-shell-create .ant-modal.import-script-modal .document-tree {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  html.app-shell-create .create-flow-modal .ant-modal-footer .ant-btn,
+  html.app-shell-create .create-flow-modal .ant-modal-body .ant-btn:not(.ant-btn-sm):not(.ant-btn-link) {
+    height: var(--cf-c-modal-btn-h) !important;
+    min-height: var(--cf-c-modal-btn-h) !important;
+    padding-inline: 8px !important;
+    line-height: calc(var(--cf-c-modal-btn-h) - 2px) !important;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+  }
+
+  html.app-shell-create .create-flow-modal .ant-modal-body .ant-input,
+  html.app-shell-create .create-flow-modal .ant-modal-body .ant-input-affix-wrapper,
+  html.app-shell-create .create-flow-modal .ant-modal-body .ant-select-selector {
+    font-size: var(--cf-c-modal-body-fs) !important;
+  }
+
+  html.app-shell-create .create-flow-modal .ant-modal-body .ant-input-lg,
+  html.app-shell-create .create-flow-modal .ant-modal-body .ant-select-lg .ant-select-selector {
+    height: var(--cf-c-modal-btn-h) !important;
+    min-height: var(--cf-c-modal-btn-h) !important;
+  }
+
+  /* ---------- 固定 698px 壳层 ---------- */
+  html.app-shell-create .create-first-step-wrap .modal-shell {
+    width: var(--cf-c-modal-w-xl) !important;
+    max-height: calc(100dvh - var(--cf-c-modal-edge) * 2) !important;
+  }
+
+  html.app-shell-create .create-first-step-wrap .modal-title {
+    height: var(--cf-c-modal-header-h) !important;
+    line-height: var(--cf-c-modal-header-h) !important;
+    padding-top: 10px !important;
+    font-size: var(--cf-c-modal-title-fs) !important;
+  }
+
+  html.app-shell-create .create-first-step-wrap .modal-body {
+    padding: var(--cf-c-modal-pad) 18px 0 !important;
+    overflow-y: auto;
+  }
+
+  html.app-shell-create .create-first-step-wrap .modal-actions {
+    padding: var(--cf-c-modal-pad) 18px !important;
+  }
+
+  html.app-shell-create .create-first-step-wrap .btn {
+    height: var(--cf-c-modal-btn-h) !important;
+    font-size: var(--cf-c-modal-btn-fs) !important;
+    padding: 0 18px !important;
+    border-radius: 8px !important;
+  }
+
+  html.app-shell-create .create-first-step-wrap .close-btn {
+    top: 14px !important;
+    right: 16px !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-title {
+    font-size: var(--cf-c-modal-title-fs) !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-header {
+    padding-bottom: var(--cf-c-modal-gap) !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-body {
+    gap: var(--cf-c-modal-gap) !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-footer {
+    padding: var(--cf-c-modal-pad) var(--cf-c-modal-pad-lg) !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-left,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-right {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-grid-scroll,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-settings-scroll {
+    max-height: none !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-textarea-wrap--rich {
+    height: min(180px, 28vh) !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-textarea-wrap--rich .ql-editor {
+    min-height: min(180px, 28vh) !important;
+    height: min(180px, 28vh) !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-preview-block,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-preview-slot {
+    min-height: 180px !important;
+    height: auto !important;
+  }
+
+  html.app-shell-create .batch-regenerate-dubbing-wrap .brdm-header {
+    height: var(--cf-c-modal-header-h) !important;
+  }
+
+  html.app-shell-create .batch-regenerate-dubbing-wrap .brdm-title {
+    font-size: var(--cf-c-modal-title-fs) !important;
+  }
+
+  html.app-shell-create .agent-picker-modal .picker-grid {
+    min-height: 0 !important;
+  }
+
+  html.app-shell-create .batch-generate-asset-modal .bgam-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  html.app-shell-create .batch-generate-asset-modal .bgam-header {
+    height: var(--cf-c-modal-header-h) !important;
+  }
+
+  html.app-shell-create .batch-generate-asset-modal .bgam-title {
+    font-size: 18px !important;
+  }
+
+  html.app-shell-create .batch-generate-asset-modal .bgam-card {
+    height: 140px !important;
+  }
+
+  /* ---------- 中大型内容弹窗：中间区 flex 撑满，内部滚动 ---------- */
+  html.app-shell-create .multi-angle-modal .multi-angle-layout,
+  html.app-shell-create .scene-setting-modal .modal-content,
+  html.app-shell-create .storyboard-script-modal .modal-content,
+  html.app-shell-create .import-scene-image-modal .import-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: 100% !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  html.app-shell-create .scene-setting-modal .toolbar,
+  html.app-shell-create .storyboard-script-modal .toolbar,
+  html.app-shell-create .scene-setting-modal .setting-warm-tip,
+  html.app-shell-create .import-scene-image-modal .import-tab-bar {
+    flex-shrink: 0;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-preview {
+    min-height: 0 !important;
+  }
+
+  /* ---------- 导入参考图（SelectSceneImageModal）：列表区直接撑满一屏 ---------- */
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-scene-image-modal-wrap,
+  html.app-shell-create .ant-modal-wrap.create-flow-modal:has(.ant-modal.select-scene-image-modal) {
+    align-items: stretch !important;
+    justify-content: center !important;
+    padding-top: var(--cf-c-modal-edge) !important;
+    padding-bottom: var(--cf-c-modal-edge) !important;
+    box-sizing: border-box !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-scene-image-modal-wrap .ant-modal,
+  html.app-shell-create .ant-modal-wrap.create-flow-modal:has(.ant-modal.select-scene-image-modal) .ant-modal {
+    height: var(--cf-c-picker-viewport-h) !important;
+    max-height: var(--cf-c-picker-viewport-h) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding-bottom: 0 !important;
+    top: var(--cf-c-modal-edge) !important;
+  }
+
+  html.app-shell-create .ant-modal.select-scene-image-modal .ant-modal-content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  html.app-shell-create .ant-modal.select-scene-image-modal .ant-modal-body {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html.app-shell-create .ant-modal.select-scene-image-modal .import-container {
+    flex: none !important;
+    height: var(--cf-c-scene-picker-list-h) !important;
+    min-height: var(--cf-c-scene-picker-list-h) !important;
+    max-height: var(--cf-c-scene-picker-list-h) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html.app-shell-create .ant-modal.select-scene-image-modal .content-area {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+
+  /* ---------- 选择场景/角色/道具（SelectAssetImageModal）：列表区直接撑满一屏 ---------- */
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap {
+    align-items: stretch !important;
+    justify-content: center !important;
+    padding-top: var(--cf-c-modal-edge) !important;
+    padding-bottom: var(--cf-c-modal-edge) !important;
+    box-sizing: border-box !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal {
+    height: var(--cf-c-picker-viewport-h) !important;
+    max-height: var(--cf-c-picker-viewport-h) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding-bottom: 0 !important;
+    top: var(--cf-c-modal-edge) !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal-content {
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal-body {
+    height: 100% !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-inner {
+    height: 100% !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-header-tabs {
+    flex-shrink: 0;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-body-shell {
+    flex: none !important;
+    height: var(--cf-c-asset-picker-list-h) !important;
+    min-height: var(--cf-c-asset-picker-list-h) !important;
+    max-height: var(--cf-c-asset-picker-list-h) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-content-row {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: none !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll::-webkit-scrollbar {
+    width: 0 !important;
+    background: transparent !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll:hover {
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(120, 140, 170, 0.45) transparent !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll:hover::-webkit-scrollbar {
+    width: 4px !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+    background: rgba(120, 140, 170, 0.45) !important;
+    border-radius: 4px !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-main {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-main-scroll {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+
+  html.app-shell-create .import-scene-image-modal .import-content,
+  html.app-shell-create .scene-setting-modal .editor-container,
+  html.app-shell-create .storyboard-script-modal .editor-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  html.app-shell-create .scene-setting-modal .editor-container .ql-editor,
+  html.app-shell-create .storyboard-script-modal .editor-container .ql-editor {
+    min-height: min(36vh, 280px) !important;
+    height: auto !important;
+  }
+
+  /* ---------- 音乐 / 音色 / 角色 ---------- */
+  html.app-shell-create .music-picker-wrap .music-card-list,
+  html.app-shell-create .voice-timbre-picker-wrap .voice-card-list {
+    max-height: min(32vh, 360px) !important;
+  }
+
+  html.app-shell-create .music-picker-wrap .music-card,
+  html.app-shell-create .voice-timbre-picker-wrap .voice-card {
+    min-height: 56px !important;
+  }
+
+  html.app-shell-create .speaker-role-picker-wrap .speaker-role-grid {
+    min-height: 160px !important;
+  }
+
+  html.app-shell-create .speaker-role-picker-wrap .speaker-role-card {
+    height: 68px !important;
+    min-height: 68px !important;
+  }
+
+  /* ---------- 确认框 / 首页充值 ---------- */
+  html.app-shell-create .ant-modal-confirm .ant-modal {
+    width: var(--cf-c-modal-w-sm) !important;
+    max-width: var(--cf-c-modal-w-sm) !important;
+  }
+
+  html.app-shell-create .ant-modal-confirm .ant-modal-body {
+    padding: var(--cf-c-modal-pad-lg) !important;
+    font-size: var(--cf-c-modal-body-fs) !important;
+  }
+
+  html.app-shell-create .home-confirm-wrap .ant-modal {
+    width: var(--cf-c-modal-w-sm) !important;
+    max-width: var(--cf-c-modal-w-sm) !important;
+  }
+
+  html.app-shell-create .recharge-modal .ant-modal,
+  html.app-shell-create .recharge-pay-modal .ant-modal {
+    width: min(720px, calc(100vw - 24px)) !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  html.app-shell-create .recharge-modal .recharge-panel,
+  html.app-shell-create .recharge-pay-modal .recharge-pay-panel {
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+  }
+
+  /* ---------- Drawer ---------- */
+  html.app-shell-create .ant-drawer-content-wrapper {
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  html.app-shell-create .ant-drawer-content-wrapper[style*='width: 400px'],
+  html.app-shell-create .ant-drawer-content-wrapper[style*='width:400px'] {
+    width: min(360px, calc(100vw - 24px)) !important;
+  }
+
+  /* 编辑弹窗左侧「选择本地文件 / 资产库导入」：限定在左栏，避免影响中间 canvas-toolbar */
+  html.app-shell-create .create-flow-modal .stage-history-panel .history-actions .ant-btn {
+    height: 1.75rem !important;
+    min-height: 1.75rem !important;
+    padding-inline: 0.375rem !important;
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.25rem !important;
+  }
+
+  html.app-shell-create .create-flow-modal .stage-history-panel .history-actions .ant-btn > .ant-btn-icon {
+    flex-shrink: 0 !important;
+    margin-inline-end: 0 !important;
+  }
+
+  html.app-shell-create .create-flow-modal .stage-history-panel .history-actions .ant-btn > span:not(.ant-btn-icon) {
+    max-width: 100% !important;
+    overflow: clip;
+  }
+
+  html.app-shell-create .create-flow-modal .stage-history-panel .history-actions .ellipsis-tooltip-text {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  html.app-shell-create .create-flow-modal .canvas-toolbar {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  html.app-shell-create .create-flow-modal .canvas-toolbar .ant-btn {
+    flex-shrink: 0 !important;
+  }
+
+  html.app-shell-create .create-flow-modal .canvas-toolbar .ant-btn > span:not(.ant-btn-icon) {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
+  }
+
+  /* ---------- 视频预览：拉高播放器、压缩时间轴轨道 ---------- */
+  html.app-shell-create .video-preview-step {
+    --vp-preview-player-min-h: clamp(220px, 40vh, 420px);
+    --vp-timeline-ruler-h: 26px;
+    --vp-timeline-track-video-min-h: 56px;
+    --vp-timeline-track-aux-min-h: 32px;
+    --vp-timeline-strip-video-h: 50px;
+    --vp-timeline-strip-h: 30px;
+    --vp-timeline-clip-video-h: 44px;
+    --vp-timeline-clip-h: 26px;
+    --vp-timeline-vol-bar-h: 26px;
+  }
+
+  html.app-shell-create .video-preview-step .preview-player-wrap {
+    flex: 1 1 0 !important;
+    min-height: var(--vp-preview-player-min-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .timeline-wrap {
+    flex: 0 0 auto !important;
+  }
+
+  html.app-shell-create .video-preview-step .timeline-ruler,
+  html.app-shell-create .video-preview-step .timeline-ruler-gutter {
+    height: var(--vp-timeline-ruler-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .timeline-ruler-gutter {
+    margin-bottom: calc(-1 * var(--vp-timeline-ruler-h)) !important;
+  }
+
+  html.app-shell-create .video-preview-step .track-row-video {
+    min-height: var(--vp-timeline-track-video-min-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .track-row-volume,
+  html.app-shell-create .video-preview-step .track-row-aux {
+    min-height: var(--vp-timeline-track-aux-min-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .track-strip,
+  html.app-shell-create .video-preview-step .track-strip-volume,
+  html.app-shell-create .video-preview-step .track-strip-dubbing,
+  html.app-shell-create .video-preview-step .track-strip-subtitle,
+  html.app-shell-create .video-preview-step .track-strip-music,
+  html.app-shell-create .video-preview-step .track-strip-aux {
+    height: var(--vp-timeline-strip-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .track-strip-video {
+    height: var(--vp-timeline-strip-video-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .track-clip-video {
+    height: var(--vp-timeline-clip-video-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .track-clip:not(.track-clip-video) {
+    height: var(--vp-timeline-clip-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .volume-bar-segment,
+  html.app-shell-create .video-preview-step .music-edit-btn-viewport {
+    top: 2px !important;
+    height: var(--vp-timeline-vol-bar-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .clip-text {
+    line-height: var(--vp-timeline-clip-h) !important;
+  }
+
+  html.app-shell-create .video-preview-step .ruler-label {
+    top: 14px !important;
+    font-size: 11px !important;
+  }
+
+  html.app-shell-create .video-preview-step .track-label {
+    font-size: 11px !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tier 2：更矮屏（高 ≤768）                                                    */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 1600px) and (max-height: 768px) {
+  html.app-shell-create {
+    --cf-c-modal-edge: 8px;
+    --cf-c-modal-shell-h: min(560px, calc(100dvh - 16px));
+    --cf-c-modal-header-h: 44px;
+    --cf-c-modal-title-fs: 14px;
+    --cf-c-modal-body-fs: 12px;
+    --cf-c-modal-btn-h: 28px;
+    --cf-c-modal-btn-fs: 12px;
+    --cf-c-modal-pad: 12px;
+    --cf-c-modal-pad-lg: 14px;
+    --cf-c-modal-gap: 8px;
+    --cf-c-scene-picker-chrome: 164px;
+    --cf-c-asset-picker-chrome: 156px;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-preview-block,
+  html.app-shell-create .storyboard-param-settings-modal .spsm-preview-slot {
+    min-height: 150px !important;
+  }
+
+  html.app-shell-create .batch-generate-asset-modal .bgam-card {
+    height: 120px !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-textarea-wrap--rich {
+    height: min(140px, 22vh) !important;
+  }
+
+  html.app-shell-create .storyboard-param-settings-modal .spsm-textarea-wrap--rich .ql-editor {
+    min-height: min(140px, 22vh) !important;
+    height: min(140px, 22vh) !important;
+  }
+
+  html.app-shell-create .music-picker-wrap .music-card-list,
+  html.app-shell-create .voice-timbre-picker-wrap .voice-card-list {
+    max-height: min(28vh, 300px) !important;
+  }
+
+  html.app-shell-create .video-preview-step {
+    --vp-preview-player-min-h: clamp(200px, 38vh, 360px);
+    --vp-timeline-ruler-h: 22px;
+    --vp-timeline-track-video-min-h: 50px;
+    --vp-timeline-track-aux-min-h: 28px;
+    --vp-timeline-strip-video-h: 44px;
+    --vp-timeline-strip-h: 26px;
+    --vp-timeline-clip-video-h: 38px;
+    --vp-timeline-clip-h: 22px;
+    --vp-timeline-vol-bar-h: 22px;
+  }
+
+  html.app-shell-create .video-preview-step .ruler-label {
+    top: 12px !important;
+    font-size: 10px !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* 大屏（与小分辨率档位互斥）：恢复列表区自然高度，避免内容区被压扁              */
+/* 条件：宽 > 1600 或 高 > 900                                                */
+/* -------------------------------------------------------------------------- */
+@media (min-width: 1601px), (min-height: 901px) {
+  html.app-shell-create {
+    --cf-large-picker-list-min-h: min(540px, 56vh);
+    --cf-large-picker-shell-min-h: min(640px, 68vh);
+    --cf-large-picker-edge: 48px;
+    --cf-large-picker-viewport-h: min(640px, calc(100dvh - var(--cf-large-picker-edge)));
+    --cf-large-asset-picker-chrome: 168px;
+    --cf-large-asset-picker-list-h: calc(var(--cf-large-picker-viewport-h) - var(--cf-large-asset-picker-chrome));
+  }
+
+  /* 导入参考图 / 选择场景图 */
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-scene-image-modal-wrap .ant-modal,
+  html.app-shell-create .ant-modal-wrap.create-flow-modal:has(.ant-modal.select-scene-image-modal) .ant-modal {
+    height: auto !important;
+    max-height: calc(100dvh - 48px) !important;
+    display: block !important;
+    padding-bottom: 0 !important;
+  }
+
+  html.app-shell-create .ant-modal.select-scene-image-modal .ant-modal-content {
+    height: auto !important;
+    min-height: var(--cf-large-picker-shell-min-h) !important;
+    max-height: calc(100dvh - 48px) !important;
+  }
+
+  html.app-shell-create .ant-modal.select-scene-image-modal .ant-modal-body {
+    height: auto !important;
+    flex: 1 1 auto !important;
+  }
+
+  html.app-shell-create .ant-modal.select-scene-image-modal .import-container {
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: var(--cf-large-picker-list-min-h) !important;
+    max-height: none !important;
+  }
+
+  html.app-shell-create .ant-modal.select-scene-image-modal .content-area {
+    flex: 1 1 auto !important;
+    min-height: var(--cf-large-picker-list-min-h) !important;
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+
+  /* 选择场景 / 选择分镜画面：大屏同样定高，内容区内部滚动 */
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap {
+    align-items: stretch !important;
+    justify-content: center !important;
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+    box-sizing: border-box !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal {
+    height: var(--cf-large-picker-viewport-h) !important;
+    max-height: var(--cf-large-picker-viewport-h) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding-bottom: 0 !important;
+    top: 24px !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal-content {
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  html.app-shell-create .ant-modal-wrap.create-flow-modal.select-asset-image-modal-wrap .ant-modal-body {
+    height: 100% !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-inner {
+    height: 100% !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-body-shell {
+    flex: none !important;
+    height: var(--cf-large-asset-picker-list-h) !important;
+    min-height: var(--cf-large-asset-picker-list-h) !important;
+    max-height: var(--cf-large-asset-picker-list-h) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-content-row {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: none !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll::-webkit-scrollbar {
+    width: 0 !important;
+    background: transparent !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll:hover {
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(120, 140, 170, 0.45) transparent !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll:hover::-webkit-scrollbar {
+    width: 4px !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+    background: rgba(120, 140, 170, 0.45) !important;
+    border-radius: 4px !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-main {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html.app-shell-create .select-asset-image-modal-wrap .saim-main-scroll {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+}

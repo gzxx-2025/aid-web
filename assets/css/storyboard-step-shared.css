@@ -1,0 +1,810 @@
+/**
+ * 创作流程：分镜脚本 / 分镜视频 / 配音对口型 共用列表与工具条样式
+ * 根节点需带 class：storyboard-step
+ */
+
+html.app-shell-create {
+  --storyboard-list-item-height: 300px;
+  --storyboard-list-header-height: 40px;
+  --storyboard-card-media-min-height: 220px;
+}
+
+.storyboard-step {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.storyboard-step .storyboard-step-shell,
+.storyboard-step .storyboard-script-empty,
+.storyboard-step .storyboard-video-empty,
+.storyboard-step .dubbing-wrap {
+  border: 1px solid rgba(74, 231, 253, 0.3);
+  border-radius: 10px;
+  min-height: 0;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.storyboard-step .storyboard-step-shell--has-list,
+.storyboard-step .storyboard-script-empty--has-list,
+.storyboard-step .dubbing-wrap--has-list {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.storyboard-step .storyboard-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.125rem 0.125rem 0.5rem;
+}
+
+.storyboard-step .storyboard-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.storyboard-step .storyboard-view-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  background: transparent;
+  border: 1px solid #2f3949;
+  border-radius: 8px;
+  height: 28px;
+}
+
+.storyboard-step .storyboard-view-toggle button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.storyboard-step .storyboard-view-toggle .ant-btn {
+  border-radius: 8px !important;
+  height: 28px;
+  min-width: 48px;
+  padding: 0 0.55rem;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #d7e2ee !important;
+  box-shadow: none !important;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
+}
+
+.storyboard-step .storyboard-view-toggle .ant-btn:hover,
+.storyboard-step .storyboard-view-toggle .ant-btn:active {
+  border-color: #2f3949 !important;
+  background: rgba(47, 57, 73, 0.35) !important;
+  color: #d7e2ee !important;
+}
+
+.storyboard-step .storyboard-view-toggle .ant-btn-primary {
+  border: 1px solid #335678 !important;
+  background: linear-gradient( 270deg, rgba(14, 89, 250, .3) 0%, rgba(0, 171, 216, .3) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.storyboard-step .storyboard-view-toggle .ant-btn-primary:hover{
+  border: 1px solid #335678 !important;
+  background: linear-gradient( 270deg, rgba(14, 89, 250, .3) 0%, rgba(0, 171, 216, .3) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.storyboard-step .storyboard-view-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.storyboard-step .storyboard-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0 0.5rem;
+  height: 22px;
+  border-radius: 999px;
+  background: #0f1422;
+  font-weight: 600;
+  color: #d7e2ee;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.storyboard-step .storyboard-progress-icon {
+  color: #4ae7fd;
+  font-size: 12px;
+}
+
+.storyboard-step .storyboard-progress-loading {
+  margin-left: 0.35rem;
+  color: var(--accent-500, #4ae7fd);
+  font-size: 0.9rem;
+}
+
+.storyboard-step .storyboard-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.storyboard-step .storyboard-toolbar-right button {
+  height: 28px;
+}
+.storyboard-step .storyboard-action-btn {
+  border-radius: var(--radius-m, 8px);
+  height: 28px;
+  padding: 0 0.75rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.storyboard-step .storyboard-action-btn.ant-btn-primary {
+  box-shadow: none;
+  background: linear-gradient(270deg, #0e59fa 0%, #00abd8 100%);
+  border: none;
+}
+
+.storyboard-step .storyboard-action-btn:not(.ant-btn-primary) {
+  border-color: rgba(74, 231, 253, 0.24);
+  background: #101a2b;
+  color: #e6edf3;
+}
+
+/*
+ * 分镜脚本 / 分镜视频 / 配音对口型：顶栏「自动生成」主按钮统一样式
+ *（实心青 #4AE7FD + 字/图标 #121212）
+ * 须带 html.app-shell-create，否则会被 create-steps-ant-overrides 里 .ant-btn-primary 渐变盖住。
+ */
+html.app-shell-create .storyboard-step .storyboard-toolbar-right .storyboard-toolbar-cyan-btn.ant-btn-primary,
+html.app-shell-create .storyboard-step .storyboard-toolbar-right .storyboard-toolbar-cyan-btn.ant-btn-primary:hover,
+html.app-shell-create .storyboard-step .storyboard-toolbar-right .storyboard-toolbar-cyan-btn.ant-btn-primary:active {
+  box-shadow: none !important;
+  background: #4ae7fd !important;
+  border: none !important;
+  color: #121212 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transform: none !important;
+}
+
+html.app-shell-create .storyboard-step .storyboard-toolbar-right .storyboard-toolbar-cyan-btn.ant-btn-primary .anticon {
+  color: #121212 !important;
+}
+
+html.app-shell-create .storyboard-step .storyboard-toolbar-right .storyboard-toolbar-cyan-btn.ant-btn-primary img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* 禁用态仍保持「主按钮」语义，略降低透明度（勿退回 default 幽灵按钮） */
+html.app-shell-create
+  .storyboard-step
+  .storyboard-toolbar-right
+  .storyboard-toolbar-cyan-btn.ant-btn-primary.ant-btn-disabled,
+html.app-shell-create
+  .storyboard-step
+  .storyboard-toolbar-right
+  .storyboard-toolbar-cyan-btn.ant-btn-primary.ant-btn-disabled:hover {
+  background: rgba(74, 231, 253, 0.38) !important;
+  color: rgba(18, 18, 18, 0.65) !important;
+  border: none !important;
+  opacity: 1;
+}
+
+html.app-shell-create
+  .storyboard-step
+  .storyboard-toolbar-right
+  .storyboard-toolbar-cyan-btn.ant-btn-primary.ant-btn-disabled
+  .anticon,
+html.app-shell-create
+  .storyboard-step
+  .storyboard-toolbar-right
+  .storyboard-toolbar-cyan-btn.ant-btn-primary.ant-btn-disabled
+  img {
+  opacity: 0.75;
+}
+
+.storyboard-step .storyboard-tooltip-wrap {
+  display: inline-flex;
+}
+
+.storyboard-toolbar-ops-btn__arrow {
+  margin-left: 2px;
+  font-size: 10px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.storyboard-toolbar-ops-btn__arrow--open {
+  transform: rotate(180deg);
+}
+
+.storyboard-ops-panel {
+  min-width: 196px;
+  padding: 8px 10px 10px;
+  border-radius: 12px;
+  background: rgba(17, 22, 33, 1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.storyboard-ops-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.storyboard-ops-panel__item-wrap {
+  display: block;
+  width: 100%;
+}
+
+.storyboard-ops-panel__item {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+  text-align: left;
+}
+
+.storyboard-ops-panel__item :deep(.anticon) {
+  font-size: 16px;
+  color: #8e97a5;
+  flex-shrink: 0;
+  transition: color 0.18s ease;
+}
+
+.storyboard-ops-panel__item:hover:not(:disabled) {
+  background: rgba(32, 36, 52, 1);
+}
+
+.storyboard-ops-panel__item:hover:not(:disabled) :deep(.anticon) {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.storyboard-ops-panel__item--disabled,
+.storyboard-ops-panel__item:disabled {
+  color: rgba(255, 255, 255, 0.35);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.storyboard-ops-panel__item--disabled :deep(.anticon),
+.storyboard-ops-panel__item:disabled :deep(.anticon) {
+  color: rgba(142, 151, 165, 0.45);
+}
+
+.storyboard-ops-panel__item--danger {
+  color: #ffc9c9;
+}
+
+.storyboard-ops-panel__item--danger :deep(.anticon) {
+  color: rgba(255, 180, 180, 0.85);
+}
+
+.storyboard-ops-panel__item--danger:hover:not(:disabled) {
+  background: rgba(32, 36, 52, 1);
+  color: #ffe0e0;
+}
+
+.storyboard-ops-panel__item--danger:hover:not(:disabled) :deep(.anticon) {
+  color: #ffb4b4;
+}
+
+.storyboard-ops-panel .ant-dropdown-menu-item-disabled .storyboard-ops-panel__item-wrap,
+.storyboard-ops-panel__item-wrap .storyboard-ops-panel__item--disabled {
+  pointer-events: auto;
+}
+
+.storyboard-ops-dropdown-overlay,
+.storyboard-ops-dropdown-overlay .ant-dropdown-menu {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* 空状态（与分镜脚本一致） */
+.storyboard-step .storyboard-empty-content {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* border: 1px dashed rgba(74, 231, 253, 0.2); */
+  border-radius: 8px;
+  background: #0b1629;
+}
+
+.storyboard-step .storyboard-empty-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: #8e97a5;
+}
+
+.storyboard-step .storyboard-empty-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.storyboard-step .storyboard-empty-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.storyboard-step .storyboard-empty-icon {
+  font-size: 30px;
+  color: rgba(142, 151, 165, 0.7);
+}
+
+.storyboard-step .storyboard-empty-title {
+  margin: 0;
+  font-size: 14px;
+  color: #8e97a5;
+  text-align: center;
+  max-width: 22rem;
+  line-height: 1.5;
+}
+
+.storyboard-step .storyboard-empty-add-btn {
+  margin-top: 0.15rem;
+  border-radius: 8px;
+  border: 1px solid rgba(74, 231, 253, 0.28);
+  background: #0f1e35;
+  color: #4ae7fd;
+  height: 30px;
+  padding: 0 14px;
+}
+
+.storyboard-step .storyboard-empty-add-btn:hover {
+  border-color: rgba(74, 231, 253, 0.45);
+  color: #7df0ff;
+}
+
+/* 列表行（三步骤共用基础） */
+.storyboard-step .storyboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-top: 0.25rem;
+}
+
+.storyboard-step .storyboard-list-item {
+  border: 1px solid rgba(74, 231, 253, 0.30);
+  background: #070d17;
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+  height: var(--storyboard-list-item-height);
+  box-sizing: border-box;
+}
+
+.storyboard-step .storyboard-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(74, 231, 253, 0.30);
+  box-sizing: border-box;
+  min-height: var(--storyboard-list-header-height);
+}
+
+/* 列表拖拽手柄（分镜脚本 / 分镜视频 / 配音对口型 列表共用） */
+.storyboard-step .storyboard-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  color: var(--home-muted, #8e97a5);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.storyboard-step .storyboard-drag-handle:active {
+  cursor: grabbing;
+}
+
+.storyboard-step .storyboard-list-item--dragging {
+  opacity: 0.72;
+}
+
+.storyboard-step .storyboard-list-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.375;
+  color: var(--home-text, #e6edf3);
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 卡片视图标题：与列表行标题同一字号，切换列表/卡片无跳变 */
+.storyboard-step .storyboard-card-title {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.375;
+  font-weight: 600;
+  color: var(--home-text, #e6edf3);
+}
+
+.storyboard-step .storyboard-title-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}
+
+/* 分镜列表/卡片标题内联编辑：与展示态同字号行高、无边框与 focus 光晕（对齐第三步 SceneCharacterProp + 覆盖 app-shell-create 全局 .ant-input） */
+.storyboard-step .storyboard-title-input {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+  color: inherit;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+.storyboard-step .storyboard-list-title .storyboard-title-input {
+  width: 0;
+  max-width: 100%;
+}
+
+.storyboard-step .storyboard-card-title .storyboard-title-input {
+  width: 0;
+  max-width: 100%;
+}
+
+.storyboard-step .storyboard-title-input input.ant-input {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
+  height: auto !important;
+  min-height: 0 !important;
+  vertical-align: baseline;
+}
+
+.storyboard-step .storyboard-title-input input.ant-input:hover,
+.storyboard-step .storyboard-title-input input.ant-input:focus,
+.storyboard-step .storyboard-title-input input.ant-input:focus-visible {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.storyboard-step .storyboard-title-input input.ant-input::placeholder {
+  color: var(--home-muted, #8e97a5);
+}
+
+.storyboard-step .storyboard-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.storyboard-step .storyboard-action-link {
+  font-size: 14px;
+  color: #4ae7fd;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.storyboard-step .storyboard-list-actions .ant-btn {
+  height: 22px;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+  border-color: #2f3949 !important;
+  background: transparent !important;
+  color: #dbe7f4;
+  font-size: 14px;
+}
+
+/* 从分镜视频跳转后：引导用户点击「修改分镜脚本」 */
+.storyboard-step .storyboard-edit-script-btn--highlight.ant-btn {
+  border-color: #4ae7fd !important;
+  background: rgba(74, 231, 253, 0.16) !important;
+  color: #4ae7fd !important;
+  font-weight: 600;
+  box-shadow:
+    0 0 0 1px rgba(74, 231, 253, 0.45),
+    0 0 14px rgba(74, 231, 253, 0.28);
+  animation: storyboard-edit-script-btn-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes storyboard-edit-script-btn-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(74, 231, 253, 0.45),
+      0 0 12px rgba(74, 231, 253, 0.22);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(74, 231, 253, 0.7),
+      0 0 20px rgba(74, 231, 253, 0.42);
+  }
+}
+
+.storyboard-step .storyboard-list-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr 3fr;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  background: #080d14;
+  height: calc(var(--storyboard-list-item-height) - var(--storyboard-list-header-height));
+  box-sizing: border-box;
+}
+
+.storyboard-step .storyboard-block-title {
+  font-size: 12px;
+  color: var(--home-muted, #8e97a5);
+  margin-bottom: 0.45rem;
+  font-weight: 600;
+}
+
+/* 分镜步骤通用：图片/视频卡片底部操作条（预览/替换/下载） */
+.scene-card-image-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 40px;
+  justify-content: center;
+  border-radius:0 0 8px 8px;
+  background: rgba(9, 13, 22, 0.66);
+  backdrop-filter: blur(2px);
+}
+.storyboard-step .asset-action-footer .ant-btn {
+  padding: 0 8px;
+  border-radius: 6px;
+  border: none;
+  background: none !important;
+  color: rgba(230, 237, 243, 0.9);
+  font-size: 14px;
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  width: 33%;
+  gap: 6px;
+}
+
+.storyboard-step .asset-action-footer .ant-btn:hover {
+  background: rgba(74, 231, 253, 0.16);
+  color: #e9fbff;
+}
+/*.storyboard-step .asset-action-footer .ant-btn:hover,*/
+/*.storyboard-step .asset-action-footer .ant-btn:focus {*/
+/*  background: rgba(74, 231, 253, 0.16);*/
+/*  color: #e9fbff;*/
+/*}*/
+.storyboard-step .asset-action-footer .ant-btn .anticon {
+  font-size: 12px;
+}
+
+.storyboard-step .asset-action-footer .footer-action-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* 底部「+ 添加」条（与分镜脚本列表末行一致） */
+.storyboard-step .storyboard-list > .storyboard-insert-gap:last-child .storyboard-insert-ui {
+  position: static;
+  transform: none;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 58px;
+  border: 1px solid rgba(74, 231, 253, 0.45);
+  border-radius: 8px;
+  background: rgba(7, 13, 23, 0.95);
+}
+
+.storyboard-step .storyboard-list > .storyboard-insert-gap:last-child .storyboard-insert-dash-line {
+  display: none;
+}
+
+.storyboard-step .storyboard-list > .storyboard-insert-gap:last-child .storyboard-insert-plus {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: #dbe7f4;
+}
+
+.storyboard-step .storyboard-list > .storyboard-insert-gap:last-child .storyboard-insert-plus:hover {
+  background: transparent;
+  color: #ffffff;
+  transform: none;
+}
+
+.storyboard-step .storyboard-list > .storyboard-insert-gap:last-child .storyboard-insert-label {
+  font-size: 16px;
+  color: #dbe7f4;
+  max-width: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+/* 配音对口型：列表主体区高度与分镜脚本/分镜视频列表行一致 */
+.storyboard-step .dubbing-list-body-shell {
+  position: relative;
+  height: calc(var(--storyboard-list-item-height) - var(--storyboard-list-header-height));
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ========== 卡片视图：行高随内容撑开 + 外层 preview-content 滚动 ========== */
+.storyboard-step:has(.storyboard-cards) {
+  height: auto;
+  min-height: 100%;
+  flex: 1 0 auto;
+}
+
+.storyboard-step .storyboard-step-shell:has(> .storyboard-cards),
+.storyboard-step .storyboard-script-empty:has(> .storyboard-cards),
+.storyboard-step .storyboard-video-empty:has(> .storyboard-cards),
+.storyboard-step .dubbing-wrap:has(> .storyboard-cards) {
+  height: auto;
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
+.storyboard-step .storyboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 1rem;
+  padding: 0.5rem 0.25rem 1.25rem;
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.storyboard-step .storyboard-card {
+  align-self: start;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  border: 1px solid rgba(74, 231, 253, 0.12);
+  background: var(--create-surface-panel);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.storyboard-step .storyboard-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(74, 231, 253, 0.08);
+  flex-shrink: 0;
+}
+
+.storyboard-step .storyboard-card-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: none;
+  min-height: auto;
+}
+
+.storyboard-step .storyboard-card .storyboard-block-card {
+  min-height: var(--storyboard-card-media-min-height);
+  height: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.storyboard-step .storyboard-card .storyboard-block-card.has-image {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--storyboard-card-media-min-height);
+  padding: 0;
+}
+
+.storyboard-step .storyboard-card .storyboard-block-card.has-image .storyboard-block-image-wrap {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: calc(var(--storyboard-card-media-min-height) - 36px);
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+
+.storyboard-step .storyboard-card .storyboard-video-set,
+.storyboard-step .storyboard-card .storyboard-video-loading,
+.storyboard-step .storyboard-card .storyboard-image-loading,
+.storyboard-step .storyboard-card .storyboard-video-failed,
+.storyboard-step .storyboard-card .storyboard-video-placeholder {
+  min-height: var(--storyboard-card-media-min-height);
+  height: auto;
+}
+
+.storyboard-step .storyboard-card .storyboard-video-preview-wrap {
+  width: 100%;
+  min-height: calc(var(--storyboard-card-media-min-height) - 40px);
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+
+.storyboard-step .storyboard-card .dubbing-video-area--card {
+  width: 100%;
+  min-height: var(--storyboard-card-media-min-height);
+  max-height: none;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}

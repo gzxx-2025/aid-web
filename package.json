@@ -1,0 +1,46 @@
+{
+  "name": "video-generation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "typecheck": "nuxi typecheck"
+  },
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@pinia/nuxt": "^0.9.0",
+    "@webav/av-canvas": "^1.2.8",
+    "@webav/av-cliper": "^1.2.8",
+    "@webav/av-recorder": "^1.2.8",
+    "ant-design-vue": "^4.2.6",
+    "axios": "^1.13.6",
+    "mammoth": "^1.9.0",
+    "pako": "^2.1.0",
+    "pinia": "^2.3.0",
+    "pinia-plugin-persistedstate": "^3.2.1",
+    "qrcode": "^1.5.4",
+    "quill": "^2.0.3",
+    "three": "^0.183.2",
+    "vue": "^3.5.0",
+    "vue-router": "^4.5.0",
+    "vuedraggable": "^4.1.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^0.7.0",
+    "nuxt": "^3.14.0",
+    "postcss-pxtorem": "^6.1.0",
+    "prettier": "^3.3.3",
+    "sass": "^1.98.0",
+    "typescript": "^5.6.0",
+    "vue-tsc": "^2.1.0"
+  }
+}
