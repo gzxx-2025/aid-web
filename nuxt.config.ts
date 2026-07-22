@@ -1,10 +1,35 @@
-const proxyTarget =
-  (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env
-    ?.NUXT_PROXY_TARGET || 'http://101.37.232.202:8080'
+const env =
+  (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env ??
+  {}
+const proxyTarget = env.NUXT_PROXY_TARGET || 'http://127.0.0.1:8080'
+const isProd = env.NODE_ENV === 'production'
+/** 生产构建移除调试类 console，保留 console.error */
+const prodPureConsole = [
+  'console.log',
+  'console.info',
+  'console.debug',
+  'console.warn',
+  'console.trace',
+  'console.table',
+  'console.group',
+  'console.groupCollapsed',
+  'console.groupEnd',
+  'console.dir',
+  'console.dirxml',
+  'console.time',
+  'console.timeEnd',
+  'console.count',
+  'console.assert'
+]
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
-  devtools: { enabled: true },
+  /** 开发环境监听所有网卡，局域网可通过本机 IP 访问（如 http://192.168.x.x:3000） */
+  devServer: {
+    host: '0.0.0.0',
+    port: 3000
+  },
+  devtools: { enabled: !isProd },
   modules: ['@pinia/nuxt', '@nuxt/eslint'],
   /** 项目静态资源目录为 `static/`（含 `static/tac` 行为验证码），映射为站点根路径 `/tac/**` */
   dir: {
@@ -19,20 +44,30 @@ export default defineNuxtConfig({
     '~/assets/css/root-font-size.css',
     '~/assets/css/main.css',
     '~/assets/css/home-theme.css',
+    '~/assets/css/search-gravity-trail.css',
     '~/assets/css/home-legacy-page.css',
+    '~/assets/css/home-new-page.css',
+    '~/assets/css/home-new-sidebar.css',
+    '~/assets/css/home-new-compact-viewport.css',
     '~/assets/css/create-flow-compact-viewport.css',
     '~/assets/css/compact-viewport-btn-radius.css',
     '~/assets/css/create-steps-ant-overrides.css',
     '~/assets/css/app-confirm-modal.css',
     '~/assets/css/viewport-compact-scale-overrides.css',
+    '~/assets/css/viewport-large-scale-overrides.css',
+    '~/assets/css/viewport-wide-range.css',
     '~/assets/css/storyboard-step-shared.css',
     '~/assets/css/scp-step-shared.css',
+    '~/assets/css/shimmer-image.css',
+    '~/assets/css/video-play-btn.css',
+    '~/assets/css/asset-card-cancel-hint.css',
+    '~/assets/css/empty-image-icon.css',
     // 玻璃态动效增强层：不需要时注释掉下一行即可，无需改组件
     // '~/assets/css/glass-effects.css'
   ],
   app: {
     head: {
-      title: 'AI·D',
+      title: '视觉AI·D',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -45,7 +80,16 @@ export default defineNuxtConfig({
         {
           rel: 'icon',
           type: 'image/svg+xml',
-          href: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎨</text></svg>'
+          href: '/favicon.svg'
+        },
+        {
+          rel: 'icon',
+          type: 'image/png',
+          href: '/favicon.png'
+        },
+        {
+          rel: 'apple-touch-icon',
+          href: '/favicon.png'
         }
       ]
     },
@@ -77,7 +121,6 @@ export default defineNuxtConfig({
     routeRules: {
       // 创作流程为登录后客户端应用，关闭 SSR 避免 Pinia payload 序列化异常
       '/create/**': { ssr: false },
-      '/index-legacy': { redirect: '/' },
       // 开发: nuxt dev 加载 .env.development；生产构建: 加载 .env.production
       '/url/**': {
         proxy: `${proxyTarget.replace(/\/$/, '')}/**`
@@ -98,8 +141,9 @@ export default defineNuxtConfig({
         exclude(file: string) {
           if (!file) return false
           if (/node_modules/i.test(file)) return true
-          // 根字号档位保持 px
+          // 根字号档位保持 px；home-new-compact-viewport 参与 pxtorem 与全站 rem 一致
           if (/root-font-size\.css$/i.test(file)) return true
+          if (/home-new-sidebar\.css$/i.test(file)) return true
           if (/create-flow-compact-viewport\.css$/i.test(file)) return true
           if (/compact-viewport-btn-radius\.css$/i.test(file)) return true
           return false
@@ -109,6 +153,17 @@ export default defineNuxtConfig({
   },
   // 生产构建合并 CSS，减少首屏多个 link 竞态导致的 FOUC
   vite: {
+    esbuild: {
+      drop: isProd ? ['debugger'] : [],
+      pure: isProd ? prodPureConsole : []
+    },
+    server: {
+      hmr: true,
+      // 避免 generate/build 输出的 dist 被 Vite 监听到后疯狂 page reload，进而清掉 .nuxt/dist
+      watch: {
+        ignored: ['**/dist/**', '**/dist.zip']
+      }
+    },
     build: {
       cssCodeSplit: false
     },

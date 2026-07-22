@@ -87,7 +87,16 @@ npm run format
 
 ## 部署
 
-构建产物为纯静态文件，由 Nginx 托管站点根路径；完整生产部署流程（含 Docker 与在线升级）见服务端仓库的《上线部署指南》。
+`npm run build` 产物为 Nuxt SSR 应用（`dist/` 目录，Node 运行 `server/index.mjs`），随统一发布包分发；完整生产部署流程（Docker / 手动 + 在线升级）见服务端仓库 [aid-server](https://gitee.com/gzxx-2025/aid-server) 的 `deploy/README.md`（统一管理脚本 `aid.sh` 一键部署）。
+
+**整套系统的服务器配置要求**（部署脚本自动校验）：
+
+| 部署内容 | 最低配置 | 推荐配置 |
+|---------|---------|---------|
+| Docker 全栈（不启用 RocketMQ） | 2核 4G / 40G 磁盘 | 4核 8G / 100G+ 磁盘 |
+| Docker 全栈 + RocketMQ | 4核 6G / 40G 磁盘 | 6核 12G / 100G+ 磁盘 |
+
+推算依据与手动部署要求见服务端仓库部署指南「配置要求」一节。
 
 ## 开源协议
 
