@@ -1,0 +1,29 @@
+/* 搜索框重力轨迹层（GSAP 官网式掉落图标）— 全局，由 useGravityMouseTrail 挂到 body */
+.search-gravity-trail-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.search-gravity-trail-shape {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-width: none;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-gravity-trail-layer {
+    display: none !important;
+  }
+}
