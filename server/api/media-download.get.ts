@@ -1,5 +1,5 @@
-import { Readable } from 'node:stream'
-import { sendStream } from 'h3'
+import { createError, getQuery, sendStream, setHeader } from 'h3'
+import { fetchMediaWithSafeRedirects, parsePublicMediaUrl } from '../utils/mediaProxyCore'
 
 /**
  * 同源媒体下载代理：把跨域 CDN 视频以 attachment 流式回传，避免浏览器直接打开播放页。
@@ -9,29 +9,15 @@ export default defineEventHandler(async (event) => {
   const rawUrl = String(getQuery(event).url || '').trim()
   const filenameRaw = String(getQuery(event).filename || '').trim()
 
-  if (!rawUrl) {
-    throw createError({ statusCode: 400, statusMessage: '缺少 url 参数' })
-  }
-  if (rawUrl.length > 4096) {
-    throw createError({ statusCode: 400, statusMessage: 'url 过长' })
-  }
-
-  let parsed: URL
-  try {
-    parsed = new URL(rawUrl)
-  } catch {
-    throw createError({ statusCode: 400, statusMessage: 'url 格式无效' })
-  }
-
-  assertPublicHttpUrl(parsed)
+  const parsed = parsePublicMediaUrl(event, rawUrl)
 
   let upstream: Response
   try {
-    upstream = await fetch(rawUrl, {
-      headers: { Accept: 'video/*,audio/*,application/octet-stream,*/*;q=0.8' },
-      redirect: 'follow'
+    upstream = await fetchMediaWithSafeRedirects(event, parsed, {
+      Accept: 'video/*,audio/*,application/octet-stream,*/*;q=0.8'
     })
-  } catch {
+  } catch (error) {
+    if (error && typeof error === 'object' && 'statusCode' in error) throw error
     throw createError({ statusCode: 502, statusMessage: '媒体拉取失败' })
   }
 
@@ -65,51 +51,23 @@ export default defineEventHandler(async (event) => {
 
   const contentLength = upstream.headers.get('content-length')
   if (contentLength) {
-    setHeader(event, 'Content-Length', contentLength)
+    const length = Number(contentLength)
+    if (Number.isFinite(length) && length >= 0) setHeader(event, 'Content-Length', length)
   }
 
-  let nodeStream: Readable
-  try {
-    nodeStream = Readable.fromWeb(
-      upstream.body as import('node:stream/web').ReadableStream
-    )
-  } catch {
-    // 部分运行时 fromWeb 不可用时回退缓冲（体积大时内存占用更高）
-    const buffer = Buffer.from(await upstream.arrayBuffer())
-    if (!buffer.length) {
-      throw createError({ statusCode: 502, statusMessage: '媒体内容为空' })
-    }
-    return buffer
-  }
-  return sendStream(event, nodeStream)
+  return sendStream(event, upstream.body)
 })
-
-function assertPublicHttpUrl(parsed: URL) {
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw createError({ statusCode: 400, statusMessage: '仅支持 http/https' })
-  }
-  const host = parsed.hostname.toLowerCase()
-  if (
-    host === 'localhost' ||
-    host === '0.0.0.0' ||
-    host === '::1' ||
-    host.endsWith('.local') ||
-    host.endsWith('.internal') ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
-    /^169\.254\./.test(host)
-  ) {
-    throw createError({ statusCode: 400, statusMessage: '不允许的下载地址' })
-  }
-}
 
 function sanitizeDownloadFilename(raw: string, pathname: string): string {
   const fromQuery = raw.replace(/[\\/:*?"<>|]+/g, '_').trim()
   if (fromQuery) return fromQuery.slice(0, 180)
 
-  const base = decodeURIComponent(pathname.split('/').pop() || '')
+  let base = pathname.split('/').pop() || ''
+  try {
+    base = decodeURIComponent(base)
+  } catch {
+    /* 保留原始文件名，避免畸形百分号导致整个下载请求 500 */
+  }
   const cleaned = base.replace(/[\\/:*?"<>|]+/g, '_').trim()
   if (cleaned && /\.(mp4|mov|webm|mkv|m4v)(\?|$)/i.test(cleaned)) {
     return cleaned.split('?')[0]!.slice(0, 180)

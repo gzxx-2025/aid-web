@@ -50,18 +50,18 @@ export function registerPromptAssetRefBlot(Quill: typeof QuillType): void {
   if (registered) return
 
   class PromptAssetRefBlot extends EmbedBlot {
-    static blotName = 'promptAssetRef'
-    static className = 'scp-prompt-asset-ref'
-    static tagName = 'SPAN'
+    static override blotName = 'promptAssetRef'
+    static override className = 'scp-prompt-asset-ref'
+    static override tagName = 'SPAN'
 
-    static create(value: unknown) {
+    static override create(value: unknown) {
       const node = super.create() as HTMLElement
       const v = parseValue(value)
       if (v) renderNode(node, v)
       return node
     }
 
-    static value(domNode: HTMLElement): PromptAssetRefValue {
+    static override value(domNode: HTMLElement): PromptAssetRefValue {
       return readFromNode(domNode)
     }
   }

@@ -38,18 +38,18 @@ export function registerPromptParamRefBlot(Quill: typeof QuillType): void {
   if (registered) return
 
   class PromptParamRefBlot extends EmbedBlot {
-    static blotName = 'promptParamRef'
-    static className = 'scp-prompt-param-ref'
-    static tagName = 'SPAN'
+    static override blotName = 'promptParamRef'
+    static override className = 'scp-prompt-param-ref'
+    static override tagName = 'SPAN'
 
-    static create(value: unknown) {
+    static override create(value: unknown) {
       const node = super.create() as HTMLElement
       const v = parseValue(value)
       if (v) renderNode(node, v)
       return node
     }
 
-    static value(domNode: HTMLElement): PromptParamRefValue {
+    static override value(domNode: HTMLElement): PromptParamRefValue {
       return readPromptParamRefFromNode(domNode)
     }
   }

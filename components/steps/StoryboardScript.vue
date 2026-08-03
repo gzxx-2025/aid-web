@@ -2,6 +2,7 @@
   <div
     ref="storyboardStepRootRef"
     class="storyboard-script create-step-storyboard-script storyboard-step"
+    data-onboarding="storyboard-panel-list"
   >
     <div class="storyboard-toolbar">
       <div class="storyboard-toolbar-left">
@@ -55,6 +56,7 @@
           v-if="isProMode && !isGenerating && !isGeneratingImageBatch"
           size="small"
           class="storyboard-action-btn"
+          data-onboarding="btn-auto-storyboard"
           @click="openAutoGenerateModal"
         >
           <template #icon><ThunderboltOutlined /></template>
@@ -159,7 +161,7 @@
             </div>
           </div>
         </div>
-        <div v-for="(panel, index) in panels" :key="panel.id" class="storyboard-card">
+        <div v-for="(panel, index) in panels" :key="panel.id" class="storyboard-card" :data-onboarding="index === 0 ? 'storyboard-shot-edit' : undefined">
           <div class="storyboard-card-header">
             <div class="storyboard-card-title" @click.stop="startEditTitle(panel)">
               <template v-if="editingId === panel.id">
@@ -708,6 +710,7 @@ import iconDownload from '~/assets/img/icon/download.svg'
 import generatingCenterIcon from '~/assets/img/icon/tmp00000001.png'
 import emptyFjIcon from '~/assets/img/icon/empty-fj.svg'
 import { looksLikeHtmlFragment, scriptApiTextToEditorHtml } from '~/utils/htmlPlain'
+import { sanitizeDisplayHtml } from '~/utils/safeDisplayHtml'
 import { moveItemBeforeIndex } from '~/utils/moveItemBeforeIndex'
 import { useCreationStore } from '~/stores/creation'
 import Draggable from 'vuedraggable'
@@ -792,9 +795,9 @@ import {
 } from '~/utils/storyboardListBootstrap'
 import {
   shouldDropImageBatchRestoreBecauseFollowing,
-  shouldRestoreImageBatchSse,
-  shouldSilentStoryboardBatchToast
+  shouldRestoreImageBatchSse
 } from '~/utils/storyboardImageBatchRestoreGate'
+import { shouldSilentStoryboardBatchToast } from '~/utils/taskSseSilentDisconnect'
 import { createCoalescedAsyncRunner } from '~/utils/coalescedAsyncRunner'
 import AsyncModalLoading from '~/components/common/AsyncModalLoading.vue'
 import {
@@ -1052,8 +1055,8 @@ const storyboardScenes = computed(() =>
 function renderStoryboardScriptContent(content?: string): string {
   const raw = (content ?? '').trim()
   if (!raw) return ''
-  if (looksLikeHtmlFragment(raw)) return raw
-  return scriptApiTextToEditorHtml(raw)
+  const html = looksLikeHtmlFragment(raw) ? raw : scriptApiTextToEditorHtml(raw)
+  return sanitizeDisplayHtml(html)
 }
 
 const isGenerating = computed(() => creationStore.isGeneratingStoryboard)
@@ -1134,13 +1137,13 @@ const scriptToolbarOpsItems = computed((): StoryboardOpsMenuItem[] => [
     key: 'auto-script',
     label: scriptAutoGenerateLabel.value,
     icon: ThunderboltOutlined,
-
+    onboardingAnchor: 'btn-auto-storyboard'
   },
   {
     key: 'batch-image',
     label: '批量生成分镜图',
     icon: PictureOutlined,
-
+    onboardingAnchor: 'sbs-batch-image',
     disabled: panels.value.length === 0 || isGeneratingImageBatch.value || isGenerating.value,
     disabledTooltip:
       panels.value.length === 0 ? '暂无分镜，请先添加或自动生成分镜' : undefined
@@ -1899,7 +1902,6 @@ async function handleGlobalStopTaskEvent(event: Event) {
   creationStore.stopStoryboardGeneration()
 }
 
-
 onMounted(() => {
   pageMounted = true
   cancelEditStoryboardImageModalPreload = preloadComponentWhenIdle(
@@ -1928,7 +1930,6 @@ onMounted(() => {
       STORYBOARD_IMAGE_GEN_SSE_TERMINAL_EVENT,
       storyboardImageBatchGen.onStoryboardImageGenSseTerminal
     )
-
     /** 先注册任务命令监听，再由挂载后的统一恢复入口接管 SSE。 */
     deliverPendingCreateFlowTaskCommands()
   }
@@ -1967,7 +1968,6 @@ onUnmounted(() => {
       STORYBOARD_IMAGE_GEN_SSE_TERMINAL_EVENT,
       storyboardImageBatchGen.onStoryboardImageGenSseTerminal
     )
-
   }
   clearEditScriptTooltipState()
   if (insertLeaveTimer) {

@@ -251,7 +251,9 @@ export async function fetchOfficialMaterialAllRows(
       if (pageNum > 50) break
     }
 
-    officialMaterialAllCache.rows = all
+    if (officialMaterialAllInflight === task) {
+      officialMaterialAllCache.rows = all
+    }
     return all
   })()
 
@@ -259,7 +261,9 @@ export async function fetchOfficialMaterialAllRows(
   try {
     return await task
   } finally {
-    officialMaterialAllInflight = null
+    if (officialMaterialAllInflight === task) {
+      officialMaterialAllInflight = null
+    }
   }
 }
 
@@ -392,7 +396,9 @@ export async function fetchPersonalCenterAllRows(
       if (pageNum > 50) break
     }
 
-    personalCenterAllCache.set(key, all)
+    if (personalCenterAllInflight.get(key) === task) {
+      personalCenterAllCache.set(key, all)
+    }
     return all
   })()
 
@@ -400,7 +406,9 @@ export async function fetchPersonalCenterAllRows(
   try {
     return await task
   } finally {
-    personalCenterAllInflight.delete(key)
+    if (personalCenterAllInflight.get(key) === task) {
+      personalCenterAllInflight.delete(key)
+    }
   }
 }
 

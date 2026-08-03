@@ -8,11 +8,16 @@ export type FlowUserTaskListReadyDetail = {
   rows: UserTaskRow[]
 }
 
-const inflightByProjectId = new Map<number, Promise<UserTaskRow[]>>()
+type FlowTaskListRequest = {
+  owner: symbol
+  force: boolean
+  promise: Promise<UserTaskRow[]>
+}
+
+const inflightByProjectId = new Map<number, FlowTaskListRequest>()
 const sessionCache = new Map<number, UserTaskRow[]>()
 
-let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
-let refreshDebounceProjectId: number | null = null
+const refreshDebounceTimers = new Map<number, ReturnType<typeof setTimeout>>()
 
 function isValidProjectId(projectId: number): boolean {
   return Number.isFinite(projectId) && projectId > 0
@@ -70,28 +75,31 @@ export function fetchFlowUserTaskListOnce(
     const cached = sessionCache.get(pid)
     if (cached) return Promise.resolve([...cached])
     const inflight = inflightByProjectId.get(pid)
-    if (inflight) return inflight
+    if (inflight) return inflight.promise
   } else {
-    /** 并发 force 共用同一个 in-flight，避免 N 个终态同时打出 N 次 list */
+    /** 并发 force 共用同一个 force 请求；终态前发出的普通请求不能承载强制刷新。 */
     const inflight = inflightByProjectId.get(pid)
-    if (inflight) return inflight
+    if (inflight?.force) return inflight.promise
     /** 必须清掉 businessApi 层 3s burst，否则 force 仍可能打到旧「进行中」行 */
     invalidateUserTaskListCache()
   }
 
+  const owner = Symbol('flow-task-list-request')
   const promise = userTaskListRecentPage({ projectId: pid })
     .then((rows) => {
-      sessionCache.set(pid, rows)
-      dispatchFlowUserTaskListReady(pid, rows)
+      if (inflightByProjectId.get(pid)?.owner === owner) {
+        sessionCache.set(pid, rows)
+        dispatchFlowUserTaskListReady(pid, rows)
+      }
       return rows
     })
     .finally(() => {
-      if (inflightByProjectId.get(pid) === promise) {
+      if (inflightByProjectId.get(pid)?.owner === owner) {
         inflightByProjectId.delete(pid)
       }
     })
 
-  inflightByProjectId.set(pid, promise)
+  inflightByProjectId.set(pid, { owner, force: options?.force === true, promise })
   return promise
 }
 
@@ -104,33 +112,31 @@ export function scheduleFlowUserTaskListRefresh(
   const pid = Number(projectId)
   if (!isValidProjectId(pid)) return
 
-  refreshDebounceProjectId = pid
-  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer)
+  const existingTimer = refreshDebounceTimers.get(pid)
+  if (existingTimer) clearTimeout(existingTimer)
   /** 并行多任务终态错峰完成时，拉长合并窗口，避免 N 次 list */
   const debounceMs = options?.debounceMs ?? 900
 
-  refreshDebounceTimer = setTimeout(() => {
-    refreshDebounceTimer = null
-    const targetPid = refreshDebounceProjectId
-    refreshDebounceProjectId = null
-    if (targetPid == null) return
-    void fetchFlowUserTaskListOnce(targetPid, { force: options?.force ?? true })
+  const timer = setTimeout(() => {
+    if (refreshDebounceTimers.get(pid) !== timer) return
+    refreshDebounceTimers.delete(pid)
+    void fetchFlowUserTaskListOnce(pid, { force: options?.force ?? true })
   }, debounceMs)
+  refreshDebounceTimers.set(pid, timer)
 }
 
 export function invalidateFlowUserTaskListCache(projectId?: number): void {
-  if (refreshDebounceTimer) {
-    clearTimeout(refreshDebounceTimer)
-    refreshDebounceTimer = null
-  }
-  refreshDebounceProjectId = null
-
   if (projectId == null) {
+    for (const timer of refreshDebounceTimers.values()) clearTimeout(timer)
+    refreshDebounceTimers.clear()
     inflightByProjectId.clear()
     sessionCache.clear()
     return
   }
   const pid = Number(projectId)
+  const timer = refreshDebounceTimers.get(pid)
+  if (timer) clearTimeout(timer)
+  refreshDebounceTimers.delete(pid)
   inflightByProjectId.delete(pid)
   sessionCache.delete(pid)
 }

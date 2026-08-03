@@ -26,9 +26,9 @@ export function useScriptChangeExtractGate() {
     }
     try {
       const [scenes, characters, props] = await Promise.all([
-        userAssetRpsList({ projectId, episodeId, assetType: 'scene', pageNum: 1, pageSize: 1 }),
-        userAssetRpsList({ projectId, episodeId, assetType: 'character', pageNum: 1, pageSize: 1 }),
-        userAssetRpsList({ projectId, episodeId, assetType: 'prop', pageNum: 1, pageSize: 1 })
+        userAssetRpsList({ projectId, episodeId, assetType: 'scene' }),
+        userAssetRpsList({ projectId, episodeId, assetType: 'character' }),
+        userAssetRpsList({ projectId, episodeId, assetType: 'prop' })
       ])
       const count = (r: { total?: number; rows?: unknown[] } | null | undefined) =>
         Number(r?.total) > 0 || (Array.isArray(r?.rows) && (r?.rows?.length ?? 0) > 0)

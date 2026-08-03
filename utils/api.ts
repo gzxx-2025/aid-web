@@ -116,8 +116,6 @@ export function buildUserApiAuthHeaders(): Record<string, string> {
   return h
 }
 
-export { isInsufficientBalanceMessage }
-
 /** 供业务代码在 SSE / 非 axios 场景按需唤起充值弹窗 */
 export function openRechargeModalFromInsufficientBalance(message: string) {
   if (!isInsufficientBalanceMessage(message)) return
@@ -312,36 +310,41 @@ api.interceptors.response.use(
 )
 
 // 封装 HTTP 请求方法
+/** 响应拦截器已把 AxiosResponse 解包为业务 JSON；Axios 的静态类型无法表达该运行时转换。 */
+function asPayloadPromise<T>(promise: Promise<unknown>): Promise<T> {
+  return promise as Promise<T>
+}
+
 export const request = {
   // GET 请求
   get<T = any>(url: string, params?: any, config?: AxiosRequestConfig): Promise<T> {
-    return api.get(url, {
+    return asPayloadPromise<T>(api.get(url, {
       params,
       ...config
-    })
+    }))
   },
 
   // POST 请求
   post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    return api.post(url, data, config)
+    return asPayloadPromise<T>(api.post(url, data, config))
   },
 
   // PUT 请求
   put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    return api.put(url, data, config)
+    return asPayloadPromise<T>(api.put(url, data, config))
   },
 
   // DELETE 请求
   delete<T = any>(url: string, params?: any, config?: AxiosRequestConfig): Promise<T> {
-    return api.delete(url, {
+    return asPayloadPromise<T>(api.delete(url, {
       params,
       ...config
-    })
+    }))
   },
 
   // PATCH 请求
   patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    return api.patch(url, data, config)
+    return asPayloadPromise<T>(api.patch(url, data, config))
   }
 }
 

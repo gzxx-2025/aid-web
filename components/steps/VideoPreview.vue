@@ -10,7 +10,7 @@
     </div>
 
     <div class="preview-simple-wrap">
-      <div class="preview-player-wrap">
+      <div class="preview-player-wrap" data-onboarding="preview-player">
         <div class="preview-player-area" @click="onPreviewPlayerAreaClick">
           <div ref="canvasHostRef" class="preview-canvas-host" :class="{ 'preview-canvas-host-behind': showNativePreviewVideo }" />
           <template v-if="showNativePreviewVideo">
@@ -81,6 +81,7 @@
 
       <div
         class="timeline-wrap"
+        data-onboarding="preview-timeline"
         ref="timelineWrapRef"
         @pointerdown="onTimelinePointerDown"
         @wheel.passive="onTimelineUserScroll"
@@ -3162,7 +3163,7 @@ function onMusicPickerConfirm(payload: MusicPickerConfirmPayload) {
   applyMusicSelection(payload)
 }
 
-function onAudioFileSelected(e: Event) {
+async function onAudioFileSelected(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
@@ -3174,57 +3175,64 @@ function onAudioFileSelected(e: Event) {
   replacingVoiceId.value = null
   if (!file || !track) return
 
-  const url = URL.createObjectURL(file)
-  if (track === 'voice' && replaceId) {
+  if (track === 'music') {
+    openEditMusicModal()
+    return
+  }
+
+  const activeVideo = targetVideoClipId
+    ? (videoClips.value.find((video) => video.id === targetVideoClipId) || null)
+    : getActiveVideoClipForOperation()
+  if (!activeVideo) {
+    message.warning('请先选中或定位到某个分镜视频片段再添加配音')
+    return
+  }
+
+  const { uploadAudioToOssWithToast } = await import('~/utils/ossUpload')
+  const url = await uploadAudioToOssWithToast(file)
+  if (!url) return
+
+  if (replaceId) {
     const existing = voiceItems.value.find((v) => v.id === replaceId)
     if (existing) {
       existing.name = file.name
       existing.url = url
-      if (targetVideoClipId) existing.videoClipId = targetVideoClipId
+      existing.videoClipId = activeVideo.id
+      existing.start = activeVideo.start
+      existing.duration = Math.max(MIN_DURATION, Number(activeVideo.duration.toFixed(2)))
       message.success('已替换配音')
       scheduleRebuild('audio')
+      scheduleTimelinePersist()
       return
     }
   }
   const item: TimelineAudioItem = {
-    id: `${track}-${Date.now()}`,
-    kind: track,
+    id: `voice-${Date.now()}`,
+    kind: 'voice',
     name: file.name,
     url,
     start: Number(currentTime.value.toFixed(2)),
     duration: 5,
-    volume: track === 'music' ? 0.25 : 1,
+    volume: 1,
     fadeIn: 0,
     fadeOut: 0,
-    loop: track === 'music',
-    volumeCurve: track === 'music' ? [0.25, 0.25, 0.25] : [1, 1, 1]
+    loop: false,
+    volumeCurve: [1, 1, 1]
   }
-  if (track === 'voice') {
-    const activeVideo = targetVideoClipId
-      ? (videoClips.value.find((v) => v.id === targetVideoClipId) || null)
-      : getActiveVideoClipForOperation()
-    if (!activeVideo) {
-      message.warning('请先选中或定位到某个分镜视频片段再添加配音')
-      return
+  item.videoClipId = activeVideo.id
+  item.start = activeVideo.start
+  item.duration = Math.max(MIN_DURATION, Number(activeVideo.duration.toFixed(2)))
+  void probeAudioDuration(url).then((dur) => {
+    item.sourceDuration = dur
+    if (syncUntimedSubtitleToVoiceDuration(item)) {
+      scheduleRebuild('all')
+      scheduleTimelinePersist()
     }
-    item.videoClipId = activeVideo.id
-    item.start = activeVideo.start
-    item.duration = Math.max(MIN_DURATION, Number(activeVideo.duration.toFixed(2)))
-    void probeAudioDuration(url).then((dur) => {
-      item.sourceDuration = dur
-      if (syncUntimedSubtitleToVoiceDuration(item)) {
-        scheduleRebuild('all')
-        scheduleTimelinePersist()
-      }
-    })
-  }
-  if (track === 'voice') voiceItems.value.push(item)
-  else {
-    openEditMusicModal()
-    return
-  }
-  resolveOverlap(track, item.id)
-  if (track === 'voice') scheduleRebuild('audio')
+  })
+  voiceItems.value.push(item)
+  resolveOverlap('voice', item.id)
+  scheduleRebuild('audio')
+  scheduleTimelinePersist()
 }
 
 function onSubtitleRangePointerDown(e: PointerEvent) {
@@ -3774,11 +3782,7 @@ onUnmounted(() => {
   try { avCanvas?.destroy?.() } catch {}
   avCanvas = null
   avUnsubTime?.(); avUnsubPlaying?.(); avUnsubPaused?.()
-  mediaBlobCache.forEach((blob) => {
-    try {
-      URL.revokeObjectURL(URL.createObjectURL(blob))
-    } catch {}
-  })
+  mediaBlobCache.clear()
   if (rebuildTimer) window.clearTimeout(rebuildTimer)
 })
 
@@ -3898,7 +3902,7 @@ onUnmounted(() => {
 .preview-subtitle-overlay {
   position: absolute;
   left: 50%;
-  bottom: 18%;
+  bottom: 3%;
   z-index: 3;
   transform: translateX(-50%);
   max-width: 86%;

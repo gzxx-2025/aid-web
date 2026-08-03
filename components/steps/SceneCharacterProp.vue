@@ -2,7 +2,7 @@
   <div class="scp-root create-step-scp">
     <!-- 顶部切换：场景 / 角色 / 道具 -->
     <div class="scp-topbar">
-      <div class="scp-tabs" role="tablist" aria-label="素材准备切换">
+      <div class="scp-tabs" role="tablist" aria-label="素材准备切换" data-onboarding="scp-tabs">
         <button
           v-for="t in tabs"
           :key="t.key"
@@ -66,6 +66,7 @@
           <a-button
             type="primary"
             class="scp-topbar-batch-btn scp-topbar-ops-btn"
+            data-onboarding="scp-batch-ops"
             :loading="
               batchGenerateTopbarLoading || batchDeleteSubmitting || batchCardGenerateSubmitting
             "
@@ -89,6 +90,7 @@
                     <button
                       type="button"
                       class="scp-topbar-ops-panel__item scp-topbar-ops-panel__item--disabled"
+                      data-onboarding="scp-batch-form-generate"
                       disabled
                       role="menuitem"
                     >
@@ -101,6 +103,7 @@
                   v-else
                   type="button"
                   class="scp-topbar-ops-panel__item"
+                  data-onboarding="scp-batch-form-generate"
                   role="menuitem"
                   @click="handleBatchFormGenerateClick"
                 >
@@ -110,6 +113,7 @@
                 <button
                   type="button"
                   class="scp-topbar-ops-panel__item"
+                  data-onboarding="scp-batch-image-generate"
                   role="menuitem"
                   :disabled="batchImageGenerateMenuDisabled"
                   @click="handleBatchImageGenerateClick"
@@ -170,7 +174,7 @@
     </div>
 
     <!-- 内容 -->
-    <div ref="scpContentRef" class="scp-content">
+    <div ref="scpContentRef" class="scp-content" data-onboarding="scp-detail-panel">
       <!-- 提取中状态 -->
       <div v-if="isExtracting" class="extracting-view">
         <div class="extracting-title" role="status" aria-live="polite">
@@ -194,6 +198,7 @@
       <div
         v-else-if="!isExtracting"
         class="asset-section"
+        data-onboarding="scp-list"
         :class="{
           'asset-section--bootstrap-pending': showAssetBootstrapMask || showActiveTabAssetLoading
         }"
@@ -1361,6 +1366,7 @@
               <a-button
                 type="primary"
                 class="btn-primary"
+                data-onboarding="extract-agent-btn"
                 @click="(e) => onClickAutoExtract(activeTab, e)"
               >
                 <div class="text-gradient">
@@ -4658,7 +4664,6 @@ function scheduleProjectAssetBootstrap() {
 
 watch(projectContextDeps, scheduleProjectAssetBootstrap, { immediate: true })
 
-
 onMounted(() => {
   assetPageMounted = true
   scheduleProjectAssetBootstrap()
@@ -4677,7 +4682,6 @@ onMounted(() => {
     FORM_IMAGE_TASK_SETTLED_EVENT,
     handleFormImageTaskSettledFromModal as EventListener
   )
-
   deliverPendingCreateFlowTaskCommands()
 })
 
@@ -7635,11 +7639,7 @@ async function startTrackTask(payload: {
   } finally {
     if (isStaleStep3Follow()) {
       /** 已被新世代 follow 接管：不 end follow、不注销登记、不关流（closer 属于新 SSE） */
-      return
-    }
-    const wasTabSwitchClose = endedByTabSwitch || suspendedForReconnect
-
-    if (wasTabSwitchClose && !didFinalizeStep3Task) {
+    } else if ((endedByTabSwitch || suspendedForReconnect) && !didFinalizeStep3Task) {
       /**
        * 挂起收尾（切 Tab 主动断开 / 良性断线待重连）：
        * 仅暂停跟进度，不 end follow：形态文案无 generating map，靠计数保流程条 loading；
@@ -7672,61 +7672,61 @@ async function startTrackTask(payload: {
         res,
         wasTabSwitchClose: true
       })
-      return
-    }
-
-    if (isStep3FormRelatedTaskType(payload.taskType)) {
-      creationStore.endStep3FormImageTaskFollow(payload.taskId)
-    }
-
-    if (
-      !didFinalizeStep3Task &&
-      isStep3FormRelatedTaskType(payload.taskType) &&
-      isStep3TerminalSseOutcome(res)
-    ) {
-      settleStep3TaskFlowLoadingOnTerminalSse(trackTab, payload.taskType, res)
-    }
-
-    if (sessionAtStart !== taskFollowSession) {
-      if (ty === 'asset_extract') {
-        creationStore.setAssetExtractFollowTask(scopeKey, null)
-      } else {
-        unregisterStep3TrackedTaskTab(payload.taskId)
-      }
-      removeTaskIdFromOngoingList(payload.taskId)
-      clearActiveTaskStream(payload.taskId)
-      releaseStep3SseGateSlotAndDrain(payload.taskId)
-      notifyGlobalGenerateTaskListUpdated()
-      void settleStep3FlowLoadingState(creationStore, route)
-      notifyStep3FormImageTaskDoneFromTrack({
-        taskId: payload.taskId,
-        taskType: payload.taskType,
-        didFinalizeStep3Task,
-        res,
-        wasTabSwitchClose: true
-      })
-      return
-    }
-    if (ty === 'asset_extract') {
-      creationStore.setAssetExtractFollowTask(scopeKey, null)
-      creationStore.finishAssetExtractUiForCurrentScope()
     } else {
-      unregisterStep3TrackedTaskTab(payload.taskId)
+      const wasTabSwitchClose = endedByTabSwitch || suspendedForReconnect
+      if (isStep3FormRelatedTaskType(payload.taskType)) {
+        creationStore.endStep3FormImageTaskFollow(payload.taskId)
+      }
+
+      if (
+        !didFinalizeStep3Task &&
+        isStep3FormRelatedTaskType(payload.taskType) &&
+        isStep3TerminalSseOutcome(res)
+      ) {
+        settleStep3TaskFlowLoadingOnTerminalSse(trackTab, payload.taskType, res)
+      }
+
+      if (sessionAtStart !== taskFollowSession) {
+        if (ty === 'asset_extract') {
+          creationStore.setAssetExtractFollowTask(scopeKey, null)
+        } else {
+          unregisterStep3TrackedTaskTab(payload.taskId)
+        }
+        removeTaskIdFromOngoingList(payload.taskId)
+        clearActiveTaskStream(payload.taskId)
+        releaseStep3SseGateSlotAndDrain(payload.taskId)
+        notifyGlobalGenerateTaskListUpdated()
+        void settleStep3FlowLoadingState(creationStore, route)
+        notifyStep3FormImageTaskDoneFromTrack({
+          taskId: payload.taskId,
+          taskType: payload.taskType,
+          didFinalizeStep3Task,
+          res,
+          wasTabSwitchClose: true
+        })
+      } else {
+        if (ty === 'asset_extract') {
+          creationStore.setAssetExtractFollowTask(scopeKey, null)
+          creationStore.finishAssetExtractUiForCurrentScope()
+        } else {
+          unregisterStep3TrackedTaskTab(payload.taskId)
+        }
+        removeTaskIdFromOngoingList(payload.taskId)
+        clearActiveTaskStream(payload.taskId)
+        releaseStep3SseGateSlotAndDrain(payload.taskId)
+        notifyGlobalGenerateTaskListUpdated(
+          didFinalizeStep3Task || isStep3TerminalSseOutcome(res) ? payload.taskId : undefined
+        )
+        void settleStep3FlowLoadingState(creationStore, route)
+        notifyStep3FormImageTaskDoneFromTrack({
+          taskId: payload.taskId,
+          taskType: payload.taskType,
+          didFinalizeStep3Task,
+          res,
+          wasTabSwitchClose
+        })
+      }
     }
-    removeTaskIdFromOngoingList(payload.taskId)
-    clearActiveTaskStream(payload.taskId)
-    releaseStep3SseGateSlotAndDrain(payload.taskId)
-    notifyGlobalGenerateTaskListUpdated(
-      didFinalizeStep3Task || isStep3TerminalSseOutcome(res) ? payload.taskId : undefined
-    )
-    void settleStep3FlowLoadingState(creationStore, route)
-    notifyStep3FormImageTaskDoneFromTrack({
-      taskId: payload.taskId,
-      taskType: payload.taskType,
-      didFinalizeStep3Task,
-      res,
-      wasTabSwitchClose
-    })
   }
 }
 
@@ -9561,7 +9561,6 @@ onBeforeUnmount(() => {
     FORM_IMAGE_TASK_SETTLED_EVENT,
     handleFormImageTaskSettledFromModal as EventListener
   )
-
   /** 切换流程步骤时不重置第三步生成 loading、不中断形态图 SSE，由 Pinia + 壳层流程条持续展示 */
 })
 

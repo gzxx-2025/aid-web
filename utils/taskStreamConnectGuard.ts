@@ -5,8 +5,18 @@
 
 const DEFAULT_WINDOW_MS = 3000
 const DEFAULT_MAX_CONNECTS = 6
+const PRUNE_THRESHOLD = 256
 
 const recentConnectAtByTaskId = new Map<number, number[]>()
+
+function pruneExpiredTaskEntries(now: number, windowMs: number) {
+  if (recentConnectAtByTaskId.size < PRUNE_THRESHOLD) return
+  for (const [id, timestamps] of recentConnectAtByTaskId) {
+    const recent = timestamps.filter((timestamp) => now - timestamp < windowMs)
+    if (recent.length) recentConnectAtByTaskId.set(id, recent)
+    else recentConnectAtByTaskId.delete(id)
+  }
+}
 
 export function claimTaskStreamConnectSlot(
   taskId: number,
@@ -18,6 +28,7 @@ export function claimTaskStreamConnectSlot(
   const now = options?.now ?? Date.now()
   const windowMs = options?.windowMs ?? DEFAULT_WINDOW_MS
   const maxConnects = options?.maxConnects ?? DEFAULT_MAX_CONNECTS
+  pruneExpiredTaskEntries(now, windowMs)
 
   const prev = recentConnectAtByTaskId.get(id) || []
   const recent = prev.filter((t) => now - t < windowMs)

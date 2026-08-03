@@ -8,6 +8,8 @@ import {
 import { isBenignTaskSseDisconnectMessage } from '~/utils/taskSseSilentDisconnect'
 import { scheduleUserBalanceRefresh } from '~/utils/userBalanceRefresh'
 
+const MAX_SSE_BUFFER_CHARS = 1024 * 1024
+
 /** SSE progress / queued 事件数据（与 {@link TaskSseProgressInput} 一致） */
 export type TaskProgressEventData = TaskSseProgressInput
 
@@ -289,6 +291,9 @@ export function useTaskStream(taskId: number) {
           if (done) break
           if (value) {
             buffer += decoder.decode(value, { stream: true })
+            if (buffer.length > MAX_SSE_BUFFER_CHARS) {
+              throw new Error('SSE event exceeds safety limit')
+            }
           }
           buffer = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 

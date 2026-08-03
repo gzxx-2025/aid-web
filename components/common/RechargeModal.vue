@@ -382,7 +382,7 @@ const router = useRouter()
 
 function openMemberAgreement() {
   emit('update:open', false)
-  router.push('/faq')
+  router.push('/about')
 }
 
 const packages = ref<RechargePackageItem[]>([])
@@ -409,6 +409,8 @@ const qrImageSrc = ref('')
 const currentOrderNo = ref('')
 const currentAmount = ref<number | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let pollSession = 0
+let pollRequestPending = false
 let qrSeq = 0
 
 const selectedPackage = computed(
@@ -548,6 +550,8 @@ const payModalUnitPrice = computed(() => {
 })
 
 function stopPolling() {
+  pollSession += 1
+  pollRequestPending = false
   if (pollTimer) {
     clearInterval(pollTimer)
     pollTimer = null
@@ -850,10 +854,15 @@ function handleRefreshQr() {
 
 function startPolling() {
   stopPolling()
-  if (!currentOrderNo.value) return
+  const orderNo = currentOrderNo.value
+  if (!orderNo) return
+  const session = pollSession
   pollTimer = setInterval(async () => {
+    if (pollRequestPending || session !== pollSession) return
+    pollRequestPending = true
     try {
-      const order = await rechargeOrderQuery(currentOrderNo.value)
+      const order = await rechargeOrderQuery(orderNo)
+      if (session !== pollSession || currentOrderNo.value !== orderNo) return
       currentAmount.value = order.payPrice
       if (order.payStatus === 'paid') {
         stopPolling()
@@ -868,6 +877,8 @@ function startPolling() {
       }
     } catch {
       // 轮询时静默，避免刷屏
+    } finally {
+      if (session === pollSession) pollRequestPending = false
     }
   }, 2500)
 }
@@ -1524,6 +1535,11 @@ onBeforeUnmount(() => {
 .recharge-pay-qr-refresh-overlay:disabled {
   cursor: wait;
 }
+
+//.recharge-pay-qr-refresh-overlay:focus-visible {
+//  outline: 2px solid rgba(74, 231, 253, 0.85);
+//  outline-offset: -2px;
+//}
 
 .recharge-pay-qr-refresh-overlay__text {
   display: flex;

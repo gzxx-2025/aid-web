@@ -33,7 +33,7 @@ export function withAppConfirmDefaults(config: AppConfirmOptions): ModalFuncProp
     centered: config.centered ?? true,
     ...config,
     icon,
-    wrapClassName: mergeWrapClassName(config.wrapClassName),
+    wrapClassName: mergeWrapClassName(String(config.wrapClassName || '')),
     class: config.class ? `${config.class} app-confirm-modal` : 'app-confirm-modal'
   }
 }

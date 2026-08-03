@@ -19,7 +19,7 @@
       <section class="login-left">
         <div class="login-form-card">
           <div>
-            <img :src="logoUrl" class="login-logo" width="111" height="43" alt="AID" />
+            <img :src="displayLogoUrl" class="login-logo" width="111" height="43" :alt="brandAlt" />
             <a-form
               :model="quickLoginForm"
               layout="vertical"
@@ -184,14 +184,16 @@
                       rel="noopener noreferrer"
                       class="agreement-link"
                       @click.stop
-                    >《用户协议》</a><span v-else>《用户协议》</span>和<a
+                      >《用户协议》</a
+                    ><span v-else>《用户协议》</span>和<a
                       v-if="privacyPolicyUrl"
                       :href="privacyPolicyUrl"
                       target="_blank"
                       rel="noopener noreferrer"
                       class="agreement-link"
                       @click.stop
-                    >《隐私政策》</a><span v-else>《隐私政策》</span>，未注册的手机号将自动创建账号
+                      >《隐私政策》</a
+                    ><span v-else>《隐私政策》</span>，未注册的手机号将自动创建账号
                   </span>
                 </a-checkbox>
               </a-form-item>
@@ -276,7 +278,14 @@
             />
           </span>
           <span class="wechat-status__text">{{ wechatStatusText }}</span>
-          <button v-if="wechatStatus === 'EXPIRED' || wechatStatus === 'FAIL'" class="wechat-status__retry" type="button" @click="openWechatLogin">重新获取</button>
+          <button
+            v-if="wechatStatus === 'EXPIRED' || wechatStatus === 'FAIL'"
+            class="wechat-status__retry"
+            type="button"
+            @click="openWechatLogin"
+          >
+            重新获取
+          </button>
         </div>
       </section>
     </main>
@@ -306,7 +315,7 @@ import { setAuthLoginChannel, type AuthLoginChannel } from '~/utils/authLoginCha
 import { normalizeInviteCode, withLoginInviteCode } from '~/utils/authLoginInvite'
 import { clearPendingCaptchaToken, setPendingCaptchaToken } from '~/utils/captchaToken'
 import { mapLoginDataToUser } from '~/utils/userProfile'
-import logoUrl from '~/assets/img/home/logo.svg'
+import fallbackLogoUrl from '~/assets/img/home/logo.svg'
 import loginVideoBgUrl from '~/assets/img/login/login-video-bg.mp4'
 import numberIconUrl from '~/assets/img/login/number.svg'
 import veriIconUrl from '~/assets/img/login/veri.svg'
@@ -336,10 +345,14 @@ const {
   recordFilingNumber,
   termsOfServiceUrl,
   privacyPolicyUrl,
+  platformLogoUrl,
+  siteName,
   loadPublicConfig,
   getSendCodeIntervalSeconds,
   getCodeMaxLength
 } = useAuthPublicConfig()
+const displayLogoUrl = computed(() => platformLogoUrl.value || fallbackLogoUrl)
+const brandAlt = computed(() => siteName.value || 'AID')
 const {
   opening: captchaOpening,
   openBehaviorCaptcha,
@@ -390,7 +403,9 @@ function clearLoginInputReadonly(e: FocusEvent | MouseEvent | TouchEvent) {
     return
   }
   if (target instanceof HTMLElement) {
-    const input = target.closest('.ant-input-affix-wrapper, .ant-input-password')?.querySelector('input')
+    const input = target
+      .closest('.ant-input-affix-wrapper, .ant-input-password')
+      ?.querySelector('input')
     if (input instanceof HTMLInputElement) input.removeAttribute('readonly')
   }
 }
@@ -639,7 +654,9 @@ onUnmounted(() => {
 })
 
 /** 开启行为验证码时先滑块校验，token 写入队列后再调受保护接口 */
-async function withCaptchaToken<T>(action: (captchaToken: string) => Promise<T>): Promise<T | null> {
+async function withCaptchaToken<T>(
+  action: (captchaToken: string) => Promise<T>
+): Promise<T | null> {
   if (!captchaEnabled.value) {
     return action('')
   }
@@ -729,8 +746,7 @@ const handleFinish = async (values?: Partial<typeof quickLoginForm>) => {
   }
   if (loading.value || captchaOpening.value) return
   // 优先用 Form @finish 回传值，避免输入框展示值与 model 不同步时漏传邀请码
-  const inviteCode =
-    normalizeInviteCode(values?.inviteCode) ?? normalizedInviteCode()
+  const inviteCode = normalizeInviteCode(values?.inviteCode) ?? normalizedInviteCode()
   if (inviteCode && quickLoginForm.inviteCode.trim() !== inviteCode) {
     quickLoginForm.inviteCode = inviteCode
   }
@@ -1390,7 +1406,9 @@ watch(
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.22s ease, background 0.2s ease;
+  transition:
+    opacity 0.22s ease,
+    background 0.2s ease;
 }
 
 .wechat-qr-refresh-overlay__text {

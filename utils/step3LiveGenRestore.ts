@@ -32,15 +32,15 @@ export function isStep3FlowStepGenerating(
   return false
 }
 
-function clearGeneratingFromScopeMap(
-  m?: Record<string | number, string>
-): Record<string | number, string> | null {
+function clearGeneratingFromScopeMap<T extends Record<string | number, string>>(
+  m?: T
+): T | null {
   if (!m || typeof m !== 'object') return null
-  const next = { ...m }
+  const next = { ...m } as T
   let changed = false
   for (const [k, s] of Object.entries(next)) {
     if (s !== 'generating') continue
-    next[k] = 'idle'
+    next[k as keyof T] = 'idle' as T[keyof T]
     changed = true
   }
   return changed ? next : null

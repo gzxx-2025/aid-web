@@ -1,6 +1,7 @@
 import type {
   StoryboardAudioTaskVO,
   StoryboardGenerateAudioRequest,
+  StoryboardLipSyncAcceptVO,
   StoryboardLipSyncRequest
 } from '~/types/business-api'
 import {
@@ -23,9 +24,13 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
       reject(new DOMException('Aborted', 'AbortError'))
       return
     }
-    const timer = setTimeout(resolve, ms)
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
     const onAbort = () => {
       clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
       reject(new DOMException('Aborted', 'AbortError'))
     }
     signal?.addEventListener('abort', onAbort, { once: true })
@@ -135,37 +140,20 @@ export async function resolveStoryboardGenerateAudio(
 }
 
 /**
- * 发起对口型：受理后若已成功直接返回；PROCESSING 时按 30s 间隔轮询 lipSyncStatus。
- * 驱动音频为台词现场 TTS（角色绑定音色优先，可传兜底音色与 TTS 参数）。
+ * 发起对口型并返回用户任务受理信息。新协议只返回 taskId/status；终态统一由任务 SSE 跟随，
+ * 不能再把 taskId 当作 storyboard/audio 记录 id 去轮询。
  */
 export async function resolveStoryboardLipSync(
   body: StoryboardLipSyncRequest,
   options?: {
-    onProgress?: (vo: StoryboardAudioTaskVO) => void
     signal?: AbortSignal
   }
-): Promise<StoryboardAudioTaskVO> {
+): Promise<StoryboardLipSyncAcceptVO> {
   const sid = Number(body.storyboardId)
   if (!Number.isFinite(sid) || sid <= 0) {
     throw new Error('分镜ID无效')
   }
 
-  const first = await userStoryboardLipSync(body)
-  options?.onProgress?.(first)
-
-  const st = normalizeStatus(first.lipSyncStatus)
-  if (st === 'SUCCEEDED') return first
-  if (st === 'FAILED') {
-    throw new Error(String(first.errorMessage || '对口型失败').trim() || '对口型失败')
-  }
-  if (st !== 'PROCESSING') {
-    // 未返回 PROCESSING 且非终态时仍尝试轮询（兼容服务端瞬时态）
-    if (!first.id) return first
-  }
-
-  return pollStoryboardAudioTaskUntil(first.id, {
-    mode: 'lipSync',
-    onProgress: options?.onProgress,
-    signal: options?.signal
-  })
+  if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+  return userStoryboardLipSync(body)
 }

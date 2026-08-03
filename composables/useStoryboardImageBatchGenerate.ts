@@ -72,11 +72,13 @@ import {
   resolveImageBatchLoadingTargetIds,
   shouldClearNonTargetImageBatchPanelStatus,
   buildImageBatchScopePreserveOnContextSwitch,
-  shouldRestoreImageBatchSse,
+  shouldRestoreImageBatchSse
+} from '~/utils/storyboardImageBatchRestoreGate'
+import {
   shouldKeepImageBatchLoadingAfterFollowMessage,
   isTaskBackgroundRunningMessage,
   isNavigationOrSuspendBatchMessage
-} from '~/utils/storyboardImageBatchRestoreGate'
+} from '~/utils/taskSseSilentDisconnect'
 import { createAsyncIdleBarrier } from '~/utils/asyncIdleBarrier'
 
 function parseTaskId(raw: unknown): number | null {

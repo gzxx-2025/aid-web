@@ -6,9 +6,9 @@ import {
   request,
   resolveClientApiUrl,
   buildUserApiAuthHeaders,
-  isInsufficientBalanceMessage,
   openRechargeModalFromInsufficientBalance
 } from '~/utils/api'
+import { isInsufficientBalanceMessage } from '~/utils/insufficientBalanceRecharge'
 import { isMergedAssetOfficial } from '~/utils/mergedAssetSource'
 import { chunkRpsDeleteIds, mergeRpsDeleteBatchResults } from '~/utils/rpsDeleteBatch'
 import { normalizeUpdateMainRequest } from '~/utils/rpsUpdateMainPayload'
@@ -202,6 +202,8 @@ import type {
   ScriptSplitPreviewRequest,
   ScriptSplitPreviewVO,
   ScriptSplitConfirmVO,
+  InviteCodeCheckRequest,
+  InviteCodeCheckVO,
   InviteInfoVO,
   InviteUsersRequest,
   InvitedUserVO,
@@ -318,6 +320,7 @@ export async function authLogout(): Promise<void> {
 /** 3. 发送验证码（开启行为验证码时由请求拦截器或显式 headers 携带 captcha-token） */
 export async function authSendCode(body: SendCodeRequest, captchaToken?: string): Promise<void> {
   const headers = captchaToken ? { 'captcha-token': captchaToken } : undefined
+  // 邀请码可选；空串不传，避免后端收到空白字段
   const inviteCode = String(body.inviteCode || '').trim()
   const payload: SendCodeRequest = { ...body }
   if (inviteCode) payload.inviteCode = inviteCode
@@ -2262,6 +2265,12 @@ export function triggerBrowserBlobDownload(blob: Blob, filename: string) {
   }, 2_000)
 }
 
+/** 邀请码预校验（匿名）POST /api/user/invite/check */
+export async function userInviteCheck(body: InviteCodeCheckRequest): Promise<InviteCodeCheckVO> {
+  const res = await request.post<ApiEnvelope<InviteCodeCheckVO>>('/api/user/invite/check', body)
+  return unwrap(res)
+}
+
 /** 我的邀请信息 POST /api/user/invite/info */
 export async function userInviteInfo(): Promise<InviteInfoVO> {
   const res = await request.post<ApiEnvelope<InviteInfoVO>>('/api/user/invite/info', {})
@@ -2591,9 +2600,13 @@ function runListDedupe<T>(
   if (existing) return existing
   const p = (async () => {
     const data = await fetcher()
-    burst.current = { key, data, at: Date.now() }
+    if (inflight.get(key) === p) {
+      burst.current = { key, data, at: Date.now() }
+    }
     return data
-  })().finally(() => inflight.delete(key))
+  })().finally(() => {
+    if (inflight.get(key) === p) inflight.delete(key)
+  })
   inflight.set(key, p)
   return p
 }
@@ -2626,6 +2639,9 @@ export const USER_TASK_LIST_RESTORE_PAGE_SIZE = 50
 
 /** 任务终态刷新时清掉 list 短时缓存，避免角标仍读到旧的「进行中」行 */
 export function invalidateUserTaskListCache(): void {
+  userTaskListPageInflight.clear()
+  userTaskListInflight.clear()
+  userTaskListRecentInflight.clear()
   userTaskListPageBurst.current = null
   userTaskListBurst.current = null
   userTaskListRecentBurst.current = null
@@ -2745,11 +2761,15 @@ export async function userTaskDetailCached(
   }
   const p = userTaskDetail({ taskId: id })
     .then((data) => {
-      userTaskDetailBurst.set(id, { data, at: Date.now() })
+      if (userTaskDetailInflight.get(id) === p) {
+        userTaskDetailBurst.set(id, { data, at: Date.now() })
+      }
       return data
     })
     .finally(() => {
-      userTaskDetailInflight.delete(id)
+      if (userTaskDetailInflight.get(id) === p) {
+        userTaskDetailInflight.delete(id)
+      }
     })
   userTaskDetailInflight.set(id, p)
   return p.catch(() => null)

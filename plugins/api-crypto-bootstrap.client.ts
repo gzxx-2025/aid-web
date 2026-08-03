@@ -1,19 +1,15 @@
 /**
- * 应用启动时拉取 /auth/public-config，同步 crypto.enabled 与 RSA 公钥（与登录页缓存共用）。
+ * 应用启动时拉取 /auth/public-config，同步 crypto、品牌与 SEO 缓存（与登录页共用）。
  */
+import { setAuthPublicConfigData } from '~/composables/useAuthPublicConfig'
 import { authPublicConfig } from '~/utils/businessApi'
-import { applyApiCryptoFromPublicConfig, hydrateApiCryptoFromSessionCache } from '~/utils/apiCrypto'
+import { hydrateApiCryptoFromSessionCache } from '~/utils/apiCrypto'
 
 export default defineNuxtPlugin(() => {
   hydrateApiCryptoFromSessionCache()
   void authPublicConfig()
     .then((data) => {
-      applyApiCryptoFromPublicConfig(data.crypto, data.serverTime)
-      try {
-        sessionStorage.setItem('auth:public-config:v2', JSON.stringify(data))
-      } catch {
-        /* ignore */
-      }
+      setAuthPublicConfigData(data)
     })
     .catch(() => {
       /* 保留 session 缓存或默认明文 */

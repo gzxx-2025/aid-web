@@ -27,41 +27,76 @@ function matchesAllowedHost(host: string, rule: string): boolean {
   return host.endsWith(suffix) && host.length > suffix.length
 }
 
-function assertPublicMediaUrl(event: H3Event, parsed: URL) {
+function isBlockedIpv4(host: string): boolean {
+  const parts = host.split('.').map(Number)
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return false
+  }
+  const [a, b, c] = parts
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) ||
+    (a === 203 && b === 0 && c === 113) ||
+    a >= 224
+  )
+}
+
+export function isBlockedMediaHostname(rawHost: string): boolean {
+  const host = rawHost.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.+$/, '')
+  if (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal')
+  ) {
+    return true
+  }
+  if (isBlockedIpv4(host)) return true
+  if (!host.includes(':')) return false
+
+  // IPv4-mapped、未指定、回环、ULA、链路/站点本地与组播 IPv6 地址。
+  return (
+    host === '::' ||
+    host === '::1' ||
+    host.startsWith('::ffff:') ||
+    /^(fc|fd)/i.test(host) ||
+    /^fe[89a-f]/i.test(host) ||
+    /^ff/i.test(host)
+  )
+}
+
+export function assertPublicMediaUrl(event: H3Event, parsed: URL) {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw createError({ statusCode: 400, statusMessage: '仅支持 http/https' })
   }
 
-  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.+$/, '')
   const allowedHosts = parseAllowedHosts(event)
   if (allowedHosts.length && !allowedHosts.some((rule) => matchesAllowedHost(host, rule))) {
     throw createError({ statusCode: 403, statusMessage: '媒体域名未授权' })
   }
 
-  if (
-    host === 'localhost' ||
-    host === '0.0.0.0' ||
-    host === '::' ||
-    host === '::1' ||
-    host.endsWith('.local') ||
-    host.endsWith('.internal') ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
-    /^169\.254\./.test(host) ||
-    /^(fc|fd)/i.test(host) ||
-    /^fe[89ab]/i.test(host)
-  ) {
+  if (isBlockedMediaHostname(host)) {
     throw createError({ statusCode: 400, statusMessage: '不允许的媒体地址' })
   }
 }
 
-function parseTargetUrl(event: H3Event, rawUrl: string): URL {
+export function parsePublicMediaUrl(
+  event: H3Event,
+  rawUrl: string,
+  maxUrlLength = MAX_URL_LENGTH
+): URL {
   if (!rawUrl) {
     throw createError({ statusCode: 400, statusMessage: '缺少 url 参数' })
   }
-  if (rawUrl.length > MAX_URL_LENGTH) {
+  if (rawUrl.length > maxUrlLength) {
     throw createError({ statusCode: 400, statusMessage: 'url 过长' })
   }
 
@@ -93,7 +128,7 @@ function readRangeHeaders(event: H3Event): Record<string, string> {
   return headers
 }
 
-async function fetchMediaWithSafeRedirects(
+export async function fetchMediaWithSafeRedirects(
   event: H3Event,
   initialUrl: URL,
   headers: Record<string, string>
@@ -137,7 +172,7 @@ function copyMediaResponseHeaders(event: H3Event, upstream: Response) {
  */
 export async function handleMediaProxyRequest(event: H3Event) {
   const rawUrl = String(getQuery(event).url || '').trim()
-  const target = parseTargetUrl(event, rawUrl)
+  const target = parsePublicMediaUrl(event, rawUrl)
   const requestHeaders = readRangeHeaders(event)
 
   let upstream: Response

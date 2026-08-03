@@ -12,21 +12,20 @@ export default defineNuxtPlugin(() => {
   const originalWarning = Modal.warning
   const originalError = Modal.error
 
-  Modal.confirm = (config: ModalFuncProps) =>
-    originalConfirm(withAppConfirmDefaults(config as AppConfirmOptions))
-
-  Modal.info = (config: ModalFuncProps) =>
-    originalInfo(
-      withAppConfirmDefaults({ ...config, confirmVariant: 'info' } as AppConfirmOptions)
-    )
-
-  Modal.warning = (config: ModalFuncProps) =>
-    originalWarning(
-      withAppConfirmDefaults({ ...config, confirmVariant: 'warning' } as AppConfirmOptions)
-    )
-
-  Modal.error = (config: ModalFuncProps) =>
-    originalError(
-      withAppConfirmDefaults({ ...config, confirmVariant: 'danger' } as AppConfirmOptions)
-    )
+  Object.assign(Modal, {
+    confirm: (config: ModalFuncProps) =>
+      originalConfirm(withAppConfirmDefaults(config as AppConfirmOptions)),
+    info: (config: ModalFuncProps) =>
+      originalInfo(
+        withAppConfirmDefaults({ ...config, confirmVariant: 'info' } as AppConfirmOptions)
+      ),
+    warning: (config: ModalFuncProps) =>
+      originalWarning(
+        withAppConfirmDefaults({ ...config, confirmVariant: 'warning' } as AppConfirmOptions)
+      ),
+    error: (config: ModalFuncProps) =>
+      originalError(
+        withAppConfirmDefaults({ ...config, confirmVariant: 'danger' } as AppConfirmOptions)
+      )
+  })
 })

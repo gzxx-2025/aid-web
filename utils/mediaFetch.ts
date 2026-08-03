@@ -1,4 +1,8 @@
 import { resolveSameOriginApiUrl } from '~/utils/sameOriginApiUrl'
+import {
+  isRejectedMediaContentType,
+  isUsableMediaBlob
+} from '~/utils/mediaBlobGuard'
 
 function isSameOriginUrl(url: string): boolean {
   if (typeof window === 'undefined') return true
@@ -31,32 +35,42 @@ export function resolveMediaPlaybackUrl(url: string): string {
   return buildMediaProxyUrl(remote)
 }
 
+async function tryFetchMediaBlob(href: string, init?: RequestInit): Promise<Blob | null> {
+  try {
+    const res = await fetch(href, init)
+    if (!res.ok) return null
+    const contentType = res.headers.get('content-type')
+    // 静态站 SPA 回退常把 /media/proxy 指到 index.html（仍是 200）
+    if (isRejectedMediaContentType(contentType)) return null
+    const blob = await res.blob()
+    if (!(await isUsableMediaBlob(blob))) return null
+    return blob
+  } catch {
+    return null
+  }
+}
+
 /**
- * 拉取媒体 Blob。跨域 CDN 统一走同源 `/media/proxy`，避免浏览器 CORS 控制台报错。
+ * 拉取媒体 Blob。跨域 CDN 优先走同源 `/media/proxy`；
+ * 代理不可用（如 generate 静态部署缺 Nitro 路由）时回退直连 CORS，避免把 HTML 当 MP4 喂给 WebAV。
  */
 export async function fetchMediaBlob(url: string): Promise<Blob | null> {
   const remote = String(url || '').trim()
   if (!remote) return null
 
-  const tryFetch = async (href: string, init?: RequestInit): Promise<Blob | null> => {
-    try {
-      const res = await fetch(href, init)
-      if (!res.ok) return null
-      const blob = await res.blob()
-      return blob.size > 0 ? blob : null
-    } catch {
-      return null
-    }
-  }
-
   if (remote.startsWith('blob:') || remote.startsWith('data:') || isSameOriginUrl(remote)) {
-    return tryFetch(remote, { credentials: 'same-origin' })
+    return tryFetchMediaBlob(remote, { credentials: 'same-origin' })
   }
 
-  // 跨域：不直连 CDN（无 CORS 时会刷控制台），一律走同源代理
-  return tryFetch(buildMediaProxyUrl(remote), {
-    credentials: 'same-origin',
-    referrerPolicy: 'no-referrer'
+  const proxied = await tryFetchMediaBlob(buildMediaProxyUrl(remote), {
+    credentials: 'same-origin'
+  })
+  if (proxied) return proxied
+
+  // 回退：CDN CORS + 防盗链通常要求带站点 Referer；勿用 no-referrer（空 Referer 会被 COS 403）
+  return tryFetchMediaBlob(remote, {
+    mode: 'cors',
+    credentials: 'omit'
   })
 }
 

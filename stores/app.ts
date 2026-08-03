@@ -23,7 +23,6 @@ export const useAppStore = defineStore('app', {
 
   persist: {
     key: 'app-store',
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    pick: ['theme', 'sidebarCollapsed']
+    paths: ['theme', 'sidebarCollapsed']
   }
 })

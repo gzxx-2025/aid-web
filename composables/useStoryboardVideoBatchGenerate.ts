@@ -30,9 +30,9 @@ import {
   buildVideoBatchScopePreserveOnContextSwitch,
   shouldKeepVideoBatchLoadingAfterFollowMessage,
   shouldRestoreImageBatchSse,
-  shouldTrustPersistedTaskIdOnListMiss,
-  isNavigationOrSuspendBatchMessage
+  shouldTrustPersistedTaskIdOnListMiss
 } from '~/utils/storyboardImageBatchRestoreGate'
+import { isNavigationOrSuspendBatchMessage } from '~/utils/taskSseSilentDisconnect'
 import { requestCancelUserTaskById } from '~/utils/userTaskCancelFlow'
 import {
   fetchProjectStoryboardRecords,

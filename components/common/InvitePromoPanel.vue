@@ -40,11 +40,11 @@
           alt=""
           width="272"
           height="202"
-        />
+        >
 
         <h3 class="invite-promo-panel__title">邀请好友 得积分</h3>
         <p class="invite-promo-panel__desc">
-          好友充值后<br />获得{{ rebateRatioText }}%的积分
+          好友充值后<br>获得{{ rebateRatioText }}%的积分
         </p>
 
         <button type="button" class="invite-promo-panel__cta" @click="emit('invite')">
@@ -78,7 +78,7 @@ const emit = defineEmits<{
 }>()
 
 const floatingRoot = ref<HTMLElement | null>(null)
-const bgUrl = bgDialogUrl
+const bgUrl = `url("${bgDialogUrl}")`
 const confettiOn = ref(false)
 
 const CONFETTI_COLORS = ['#5B8CFF', '#00D4FF', '#FF6B9D', '#FFD166', '#7CFFB2', '#C77DFF', '#FF8A5B']
@@ -135,7 +135,7 @@ defineExpose({
   padding: 24px 14px 20px;
   border-radius: 8px;
   background-color: #111621;
-  background-image: v-bind('`url(${bgUrl})`');
+  background-image: v-bind(bgUrl);
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-position: center;

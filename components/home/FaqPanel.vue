@@ -84,12 +84,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { SearchOutlined, RightOutlined } from '@ant-design/icons-vue'
 import { useAuthPublicConfig } from '~/composables/useAuthPublicConfig'
 import { userFaqDetail, userFaqList } from '~/utils/businessApi'
 import type { UserFaqDetail, UserFaqListItem } from '~/types/business-api'
+import { sanitizeDisplayHtml } from '~/utils/safeDisplayHtml'
 
 const { exchangeImageUrl, loadPublicConfig } = useAuthPublicConfig()
 
@@ -100,6 +101,9 @@ const loading = ref(false)
 const loadError = ref(false)
 const detailsLoading = ref(false)
 const detailCache = ref<Map<number, UserFaqDetail>>(new Map())
+const MAX_FAQ_LIST_PAGES = 100
+let listLoadGeneration = 0
+let detailLoadGeneration = 0
 
 const categories = computed(() => {
   const orderMap = new Map<string, number>()
@@ -132,33 +136,38 @@ function getAnswerHtml(id: number) {
   const detail = detailCache.value.get(id)
   const raw = String(detail?.content || '').trim()
   if (!raw) return '<p>暂无内容</p>'
-  return raw
+  return sanitizeDisplayHtml(raw)
 }
 
 async function loadAllItems() {
+  const generation = ++listLoadGeneration
   loading.value = true
   loadError.value = false
   try {
     const merged: UserFaqListItem[] = []
     let pageNum = 1
     let hasMore = true
-    while (hasMore) {
+    while (hasMore && pageNum <= MAX_FAQ_LIST_PAGES) {
       const page = await userFaqList({
         pageNum,
         pageSize: 50,
         keyword: keyword.value.trim() || undefined
       })
+      if (generation !== listLoadGeneration) return
+      if (!page.rows.length) break
       merged.push(...page.rows)
       hasMore = page.hasMore
       pageNum += 1
     }
+    if (generation !== listLoadGeneration) return
     allItems.value = merged
     ensureActiveCategory()
   } catch {
+    if (generation !== listLoadGeneration) return
     allItems.value = []
     loadError.value = true
   } finally {
-    loading.value = false
+    if (generation === listLoadGeneration) loading.value = false
   }
 }
 
@@ -173,22 +182,33 @@ function ensureActiveCategory() {
 }
 
 async function loadCategoryDetails() {
+  const generation = ++detailLoadGeneration
   const items = categoryItems.value
   const toFetch = items.filter((item) => !detailCache.value.has(item.id))
   if (!toFetch.length) return
 
   detailsLoading.value = true
   try {
-    await Promise.all(
+    const results = await Promise.allSettled(
       toFetch.map(async (item) => {
         const detail = await userFaqDetail({ id: item.id })
-        detailCache.value.set(item.id, detail)
+        return { id: item.id, detail }
       })
     )
-  } catch {
-    message.error('部分问题详情加载失败')
+    if (generation !== detailLoadGeneration) return
+    const nextCache = new Map(detailCache.value)
+    let failed = false
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        nextCache.set(result.value.id, result.value.detail)
+      } else {
+        failed = true
+      }
+    }
+    detailCache.value = nextCache
+    if (failed) message.error('部分问题详情加载失败')
   } finally {
-    detailsLoading.value = false
+    if (generation === detailLoadGeneration) detailsLoading.value = false
   }
 }
 
@@ -211,10 +231,6 @@ watch(keyword, () => {
   }, 320)
 })
 
-watch(activeCategory, () => {
-  void loadCategoryDetails()
-})
-
 watch(categoryItems, () => {
   void loadCategoryDetails()
 })
@@ -222,6 +238,13 @@ watch(categoryItems, () => {
 onMounted(() => {
   void loadAllItems()
   void loadPublicConfig()
+})
+
+onBeforeUnmount(() => {
+  listLoadGeneration += 1
+  detailLoadGeneration += 1
+  if (keywordTimer) clearTimeout(keywordTimer)
+  keywordTimer = null
 })
 </script>
 

@@ -15,7 +15,7 @@
       aria-label="页面加载中"
     >
       <div class="global-page-loading__inner">
-        <div class="global-page-loading__logo">AI Director</div>
+        <div class="global-page-loading__logo">{{ brandDisplayName }}</div>
         <div class="global-page-loading__dots">
           <span></span>
           <span></span>
@@ -36,7 +36,7 @@
     >
       <div class="route-overlay__inner">
         <div class="route-overlay__glow" />
-        <div class="route-overlay__brand">AI·D</div>
+        <div class="route-overlay__brand">{{ brandShortName }}</div>
         <div class="route-overlay__hint">正在进入创作流程…</div>
         <div class="route-overlay__bar" aria-hidden="true">
           <i />
@@ -49,7 +49,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
+import { useAuthPublicConfig } from '~/composables/useAuthPublicConfig'
 import { useEnterCreateFlowOverlay } from '~/composables/useEnterCreateFlowOverlay'
+import { usePublicSiteHead } from '~/composables/usePublicSiteHead'
 import {
   createFlowPageKey,
   endCreateFlowNavTransition,
@@ -58,9 +60,14 @@ import {
   isCreateFlowTransitionCrashError
 } from '~/utils/createFlowNavSerialize'
 
+usePublicSiteHead()
+
 const route = useRoute()
 const router = useRouter()
 const nuxtApp = useNuxtApp()
+const { siteName } = useAuthPublicConfig()
+const brandDisplayName = computed(() => siteName.value || 'AI Director')
+const brandShortName = computed(() => siteName.value || 'AI·D')
 const { enterCreateFlowOverlayPending, endEnterCreateFlowOverlay } = useEnterCreateFlowOverlay()
 const MIN_LOADING_MS = 320
 const MIN_ROUTE_OVERLAY_MS = 420

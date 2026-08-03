@@ -34,7 +34,7 @@ export interface LoginRequest {
   account?: string
   password?: string
   code?: string
-  /** 邀请码；仅首次注册严格校验并绑定，老用户登录忽略 */
+  /** 邀请码；仅首次注册瞬间生效，无效码静默忽略 */
   inviteCode?: string
 }
 
@@ -83,7 +83,7 @@ export interface SendCodeRequest {
   target?: string
   codeType: 'sms' | 'email'
   scene: 'login' | 'bind' | 'unbind' | 'reset'
-  /** 仅登录场景的新用户使用，发送验证码前由服务端校验 */
+  /** 邀请码（登录场景可选）；有则透传，空串不传 */
   inviteCode?: string
 }
 
@@ -2484,6 +2484,18 @@ export interface EpisodeSegmentVideosResult {
   videoReadyCount?: number
   dubbedCount?: number
   items: EpisodeSegmentVideoItem[]
+}
+
+/** POST /api/user/invite/check */
+export interface InviteCodeCheckRequest {
+  inviteCode: string
+}
+
+export interface InviteCodeCheckVO {
+  valid: boolean
+  reason?: string | null
+  inviterNickName?: string | null
+  inviterAvatar?: string | null
 }
 
 /** POST /api/user/invite/info */

@@ -26,7 +26,9 @@ export function fetchCreationStepStatusOnce(
 
   const promise = creationStepStatus(body)
     .then((data) => {
-      resultCache.set(key, { at: Date.now(), data })
+      if (inflightByKey.get(key) === promise) {
+        resultCache.set(key, { at: Date.now(), data })
+      }
       return data
     })
     .finally(() => {

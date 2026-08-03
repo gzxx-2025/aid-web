@@ -1,3 +1,9 @@
+import {
+  isContextSwitchKeepAliveMessage,
+  isNavigationOrSuspendBatchMessage,
+  isTaskBackgroundRunningMessage
+} from '~/utils/taskSseSilentDisconnect'
+
 /**
  * 分镜图/分镜视频批量 restore 闸门（跨集切回时防「有 loading 无 SSE / 清掉原集状态」）。
  *
@@ -92,20 +98,6 @@ export function buildVideoBatchScopePreserveOnContextSwitch(input: {
   }
   return out
 }
-
-export {
-  isContextSwitchKeepAliveMessage,
-  isTaskBackgroundRunningMessage,
-  shouldKeepImageBatchLoadingAfterFollowMessage,
-  shouldSilentStoryboardBatchToast,
-  isNavigationOrSuspendBatchMessage
-} from '~/utils/taskSseSilentDisconnect'
-
-import {
-  isNavigationOrSuspendBatchMessage,
-  isTaskBackgroundRunningMessage,
-  isContextSwitchKeepAliveMessage
-} from '~/utils/taskSseSilentDisconnect'
 
 /** 分镜视频：导航/良性断连 + 视频特有未就绪文案 → 保活，禁止 abort/finish */
 export function shouldKeepVideoBatchLoadingAfterFollowMessage(message: unknown): boolean {

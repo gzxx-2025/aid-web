@@ -247,7 +247,7 @@ export function requeueStep3SseItemToEnd(item: Step3SseQueueItem): void {
  * enqueued / rejected 放回队头并停止。
  */
 export function drainStep3SseQueue(
-  onDrain: (item: Step3SseQueueItem) => Step3SseAcquireResult | void
+  onDrain: (item: Step3SseQueueItem) => Step3SseAcquireResult
 ): void {
   let guard = 0
   let consecutiveSkips = 0

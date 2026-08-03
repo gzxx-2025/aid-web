@@ -5,6 +5,15 @@ import { applyApiCryptoFromPublicConfig } from '~/utils/apiCrypto'
 
 const STORAGE_KEY = 'auth:public-config:v2'
 
+/** 全局共享，保证各处 Logo / SEO / 开关读到同一份 public-config */
+const sharedConfig = ref<AuthPublicConfigData | null>(null)
+const sharedLoading = ref(false)
+const sharedLoaded = ref(false)
+
+function trimConfigText(raw: unknown): string {
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : ''
+}
+
 function readCachedConfig(): AuthPublicConfigData | null {
   if (!import.meta.client) return null
   try {
@@ -30,11 +39,30 @@ function syncCryptoFromConfig(data: AuthPublicConfigData | null) {
   applyApiCryptoFromPublicConfig(data?.crypto, data?.serverTime)
 }
 
-/** 登录页首屏公开配置：验证码开关、发码策略等（与接口文档 /auth/public-config 对齐） */
+function hydrateSharedFromCache() {
+  if (sharedConfig.value || !import.meta.client) return
+  const cached = readCachedConfig()
+  if (!cached) return
+  sharedConfig.value = cached
+  sharedLoaded.value = true
+  syncCryptoFromConfig(cached)
+}
+
+/** 启动插件 / 其它入口写入公开配置（同步内存 + sessionStorage + crypto） */
+export function setAuthPublicConfigData(data: AuthPublicConfigData) {
+  sharedConfig.value = data
+  sharedLoaded.value = true
+  syncCryptoFromConfig(data)
+  writeCachedConfig(data)
+}
+
+/** 登录页首屏公开配置：验证码开关、发码策略、品牌与 SEO 等（与 /auth/public-config 对齐） */
 export function useAuthPublicConfig() {
-  const config = ref<AuthPublicConfigData | null>(readCachedConfig())
-  const loading = ref(false)
-  const loaded = ref(!!config.value)
+  hydrateSharedFromCache()
+
+  const config = sharedConfig
+  const loading = sharedLoading
+  const loaded = sharedLoaded
 
   if (config.value) syncCryptoFromConfig(config.value)
 
@@ -47,45 +75,46 @@ export function useAuthPublicConfig() {
 
   const captchaType = computed(() => config.value?.captcha?.type ?? 'SLIDER')
 
-  const cryptoEnabled = computed(() => Boolean(config.value?.crypto?.enabled && config.value?.crypto?.publicKey))
+  const cryptoEnabled = computed(() =>
+    Boolean(config.value?.crypto?.enabled && config.value?.crypto?.publicKey)
+  )
 
-  const recordFilingNumber = computed(() => {
-    const n = config.value?.basic?.record_filing_number
-    return typeof n === 'string' && n.trim() ? n.trim() : ''
-  })
+  /** POST /auth/public-config → basic.site_name */
+  const siteName = computed(() => trimConfigText(config.value?.basic?.site_name))
 
-  const termsOfServiceUrl = computed(() => {
-    const url = config.value?.basic?.terms_of_service
-    return typeof url === 'string' && url.trim() ? url.trim() : ''
-  })
+  /** POST /auth/public-config → basic.site_description */
+  const siteDescription = computed(() => trimConfigText(config.value?.basic?.site_description))
 
-  const privacyPolicyUrl = computed(() => {
-    const url = config.value?.basic?.privacy_policy
-    return typeof url === 'string' && url.trim() ? url.trim() : ''
-  })
+  /** POST /auth/public-config → basic.site_keywords */
+  const siteKeywords = computed(() => trimConfigText(config.value?.basic?.site_keywords))
 
-  const exchangeImageUrl = computed(() => {
-    const url = config.value?.basic?.exchange_image_url
-    return typeof url === 'string' && url.trim() ? url.trim() : ''
-  })
+  const recordFilingNumber = computed(() => trimConfigText(config.value?.basic?.record_filing_number))
+
+  const termsOfServiceUrl = computed(() => trimConfigText(config.value?.basic?.terms_of_service))
+
+  const privacyPolicyUrl = computed(() => trimConfigText(config.value?.basic?.privacy_policy))
+
+  /** POST /auth/public-config → basic.membership_agreement */
+  const membershipAgreementUrl = computed(() =>
+    trimConfigText(config.value?.basic?.membership_agreement)
+  )
+
+  const exchangeImageUrl = computed(() => trimConfigText(config.value?.basic?.exchange_image_url))
 
   /** POST /auth/public-config → basic.service_email */
-  const serviceEmail = computed(() => {
-    const email = config.value?.basic?.service_email
-    return typeof email === 'string' && email.trim() ? email.trim() : ''
-  })
+  const serviceEmail = computed(() => trimConfigText(config.value?.basic?.service_email))
 
   /** POST /auth/public-config → basic.business_email */
-  const businessEmail = computed(() => {
-    const email = config.value?.basic?.business_email
-    return typeof email === 'string' && email.trim() ? email.trim() : ''
-  })
+  const businessEmail = computed(() => trimConfigText(config.value?.basic?.business_email))
 
   /** POST /auth/public-config → basic.contact_phone */
-  const contactPhone = computed(() => {
-    const phone = config.value?.basic?.contact_phone
-    return typeof phone === 'string' && phone.trim() ? phone.trim() : ''
-  })
+  const contactPhone = computed(() => trimConfigText(config.value?.basic?.contact_phone))
+
+  /** POST /auth/public-config → brand.platformLogoUrl */
+  const platformLogoUrl = computed(() => trimConfigText(config.value?.brand?.platformLogoUrl))
+
+  /** POST /auth/public-config → brand.faviconUrl */
+  const faviconUrl = computed(() => trimConfigText(config.value?.brand?.faviconUrl))
 
   /** POST /auth/public-config → promotion.registerBonus.amount（开启且有效时返回格式化金额，否则空） */
   const registerBonusAmountText = computed(() => {
@@ -112,20 +141,13 @@ export function useAuthPublicConfig() {
     return Number.isFinite(n) ? String(n) : '10'
   })
 
-  const tutorialUrl = computed(() => {
-    const url = config.value?.basic?.tutorial_url
-    return typeof url === 'string' && url.trim() ? url.trim() : ''
-  })
+  const tutorialUrl = computed(() => trimConfigText(config.value?.basic?.tutorial_url))
 
-  const openSourceGiteeUrl = computed(() => {
-    const url = config.value?.basic?.open_source_gitee_url
-    return typeof url === 'string' && url.trim() ? url.trim() : ''
-  })
+  const openSourceGiteeUrl = computed(() =>
+    trimConfigText(config.value?.basic?.open_source_gitee_url)
+  )
 
-  const openSourceGitUrl = computed(() => {
-    const url = config.value?.basic?.open_source_git_url
-    return typeof url === 'string' && url.trim() ? url.trim() : ''
-  })
+  const openSourceGitUrl = computed(() => trimConfigText(config.value?.basic?.open_source_git_url))
 
   const wechatNotifySystemEnabled = computed(() => config.value?.wechatNotify?.enabled === true)
 
@@ -158,11 +180,7 @@ export function useAuthPublicConfig() {
   async function loadPublicConfig(force = false): Promise<AuthPublicConfigData | null> {
     if (!import.meta.client) return null
     if (!force && !config.value) {
-      const cached = readCachedConfig()
-      if (cached) {
-        config.value = cached
-        syncCryptoFromConfig(cached)
-      }
+      hydrateSharedFromCache()
     }
     if (!force && config.value) {
       loaded.value = true
@@ -171,10 +189,7 @@ export function useAuthPublicConfig() {
     loading.value = true
     try {
       const data = await authPublicConfig()
-      config.value = data
-      syncCryptoFromConfig(data)
-      writeCachedConfig(data)
-      loaded.value = true
+      setAuthPublicConfigData(data)
       return data
     } catch {
       return config.value
@@ -204,13 +219,19 @@ export function useAuthPublicConfig() {
     captchaEnabled,
     captchaType,
     cryptoEnabled,
+    siteName,
+    siteDescription,
+    siteKeywords,
     recordFilingNumber,
     termsOfServiceUrl,
     privacyPolicyUrl,
+    membershipAgreementUrl,
     exchangeImageUrl,
     serviceEmail,
     businessEmail,
     contactPhone,
+    platformLogoUrl,
+    faviconUrl,
     registerBonusAmountText,
     registerBonusBadgeText,
     invitePromotionEnabled,

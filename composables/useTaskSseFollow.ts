@@ -9,7 +9,6 @@ import {
 } from '~/utils/taskSseFollowRegistry'
 import { isBenignTaskSseDisconnectMessage } from '~/utils/taskSseSilentDisconnect'
 import { scheduleUserBalanceRefresh } from '~/utils/userBalanceRefresh'
-export { isBenignTaskSseDisconnectMessage }
 
 export type TaskSseTerminalWaitResult =
   | { kind: 'sse'; event: TaskStreamResult }
@@ -218,9 +217,14 @@ export async function waitUserTaskSseTerminal(payload: {
     )
 
     let settled = false
+    let timeoutTimer: ReturnType<typeof setTimeout> | null = null
     const cleanup = () => {
       if (settled) return
       settled = true
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer)
+        timeoutTimer = null
+      }
       stopWatch()
       try {
         stream.close()
@@ -235,7 +239,10 @@ export async function waitUserTaskSseTerminal(payload: {
         event
       }))
       const timeoutPromise = new Promise<{ kind: 'timeout' }>((resolve) => {
-        setTimeout(() => resolve({ kind: 'timeout' }), timeoutMs)
+        timeoutTimer = setTimeout(() => {
+          timeoutTimer = null
+          resolve({ kind: 'timeout' })
+        }, timeoutMs)
       })
       const winner = await Promise.race([ssePromise, timeoutPromise])
       cleanup()

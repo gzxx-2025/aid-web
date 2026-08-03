@@ -26,7 +26,9 @@ export function fetchUserStoryboardDetailOnce(
 
   const promise = userStoryboardDetail({ id })
     .then((row) => {
-      resultCache.set(id, { at: Date.now(), row })
+      if (inflightByStoryboardId.get(id) === promise) {
+        resultCache.set(id, { at: Date.now(), row })
+      }
       return row
     })
     .finally(() => {

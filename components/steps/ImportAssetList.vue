@@ -167,6 +167,7 @@ import dialogSelectSelIcon from '@/assets/img/icon/dialog-select-sel.svg'
 import { userAssetCenterDetail } from '~/utils/businessApi'
 import type { AssetCenterDetailVO } from '~/types/business-api'
 import { scriptApiTextToEditorHtml } from '~/utils/htmlPlain'
+import { sanitizeDisplayHtml } from '~/utils/safeDisplayHtml'
 import {
   mapUserAssetRowToImportItem,
   materialKeyToApiType,
@@ -352,7 +353,7 @@ async function handleFilePreview(asset: any) {
     previewTitle.value = detail.name || detail.categoryName || asset.name || '预览'
     const content = buildPreviewContent(detail)
     previewImageUrl.value = content.imageUrl
-    previewHtml.value = content.html
+    previewHtml.value = sanitizeDisplayHtml(content.html)
   } catch (e: any) {
     message.error(e?.msg ?? e?.message ?? '加载预览失败')
     previewOpen.value = false

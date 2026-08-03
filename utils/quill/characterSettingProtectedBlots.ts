@@ -10,33 +10,33 @@ export function registerCharacterSettingProtectedBlots(Quill: typeof QuillType):
   if (registered) return
 
   class CharacterSettingKeyBlot extends EmbedBlot {
-    static blotName = 'characterSettingKey'
-    static className = 'scp-char-setting-key'
-    static tagName = 'SPAN'
+    static override blotName = 'characterSettingKey'
+    static override className = 'scp-char-setting-key'
+    static override tagName = 'SPAN'
 
-    static create(value: unknown) {
+    static override create(value: unknown) {
       const node = super.create()
       node.textContent = typeof value === 'string' ? value : ''
       return node
     }
 
-    static value(domNode: HTMLElement): string {
+    static override value(domNode: HTMLElement): string {
       return domNode.textContent ?? ''
     }
   }
 
   class CharacterSettingSectionBlot extends EmbedBlot {
-    static blotName = 'characterSettingSection'
-    static className = 'scp-char-setting-section'
-    static tagName = 'SPAN'
+    static override blotName = 'characterSettingSection'
+    static override className = 'scp-char-setting-section'
+    static override tagName = 'SPAN'
 
-    static create(value: unknown) {
+    static override create(value: unknown) {
       const node = super.create()
       node.textContent = typeof value === 'string' ? value : ''
       return node
     }
 
-    static value(domNode: HTMLElement): string {
+    static override value(domNode: HTMLElement): string {
       return domNode.textContent ?? ''
     }
   }

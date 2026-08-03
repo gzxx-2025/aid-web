@@ -33,13 +33,14 @@
               :title="video.label"
               @click="selectVideo(video.id)"
             >
-              <video
-                class="cvfm-video-card__media"
+              <ShimmerVideo
                 :src="video.url"
-                :poster="video.poster"
-                muted
-                playsinline
+                video-class="cvfm-video-card__media"
+                wrapper-class="cvfm-video-card__shimmer"
+                object-fit="cover"
                 preload="metadata"
+                reveal-direction="fade"
+                :min-shimmer-ms="220"
               />
               <span class="cvfm-video-card__label">{{ video.label }}</span>
             </button>
@@ -58,12 +59,11 @@
         <section class="cvfm-preview">
           <video
             v-if="selectedVideo"
-            :key="`${selectedVideo.id}-${selectedVideoPlaybackUrl}`"
+            :key="`${selectedVideo.id}-${selectedVideo.url}`"
             ref="videoRef"
             class="cvfm-preview__video"
-            :src="selectedVideoPlaybackUrl"
+            :src="selectedVideo.url"
             :poster="selectedVideo.poster"
-            crossorigin="anonymous"
             playsinline
             preload="auto"
             aria-label="视频预览，点击或按空格播放或暂停"
@@ -100,14 +100,26 @@
               <PauseCircleOutlined v-if="isPlaying" />
               <PlayCircleOutlined v-else />
             </button>
-            <div :class="['cvfm-filmstrip', { 'is-disabled': !videoReady || videoError }]">
+            <div
+              :class="[
+                'cvfm-filmstrip',
+                {
+                  'is-disabled': !videoReady || videoError,
+                  'is-loading': timelineLoading
+                }
+              ]"
+            >
               <span
                 v-for="(frame, index) in timelineFrames"
                 :key="`${selectedVideoId}-${index}`"
                 class="cvfm-filmstrip__frame"
                 :style="{ backgroundImage: `url(${frame})` }"
               />
-              <span v-if="timelineFrames.length === 0" class="cvfm-filmstrip__placeholder" />
+              <span
+                v-if="timelineFrames.length === 0"
+                class="cvfm-filmstrip__placeholder"
+                :class="{ 'is-loading': timelineLoading }"
+              />
               <span class="cvfm-filmstrip__playhead" :style="{ left: `${timelineProgress}%` }" />
               <input
                 class="cvfm-filmstrip__input"
@@ -185,16 +197,15 @@ import {
 } from '~/utils/collectProjectStoryboardVideos'
 import {
   clampVideoFrameTime,
-  captureVideoElementFrame,
   captureVideoTimelineFrames,
-  seekVideoToFrame,
+  captureVideoUrlFrame,
   type CapturedVideoFrame
 } from '~/utils/videoFrameCapture'
 import { formatVideoFrameName } from '~/utils/videoFrameName'
 import { uploadImageToOssWithToast } from '~/utils/ossUpload'
 import { emptyImageIconUrl } from '~/utils/emptyImageIcon'
-import { resolveMediaPlaybackUrl } from '~/utils/mediaFetch'
 import { useVideoPlaybackSpaceShortcut } from '~/composables/useVideoPlaybackSpaceShortcut'
+import ShimmerVideo from '~/components/common/ShimmerVideo.vue'
 
 interface Props {
   open: boolean
@@ -223,9 +234,6 @@ const selectedVideoId = ref('')
 const selectedVideo = computed(
   () => videos.value.find((video) => video.id === selectedVideoId.value) || null
 )
-const selectedVideoPlaybackUrl = computed(() =>
-  selectedVideo.value ? resolveMediaPlaybackUrl(selectedVideo.value.url) : ''
-)
 const videoRef = ref<HTMLVideoElement | null>(null)
 const videoStripRef = ref<HTMLElement | null>(null)
 const duration = ref(0)
@@ -237,6 +245,7 @@ const confirming = ref(false)
 const canScrollLeft = ref(false)
 const canScrollRight = ref(false)
 const timelineFrames = ref<string[]>([])
+const timelineLoading = ref(false)
 const timelineProgress = computed(() => {
   if (!duration.value) return 0
   return Math.min(100, Math.max(0, (currentTime.value / duration.value) * 100))
@@ -284,6 +293,7 @@ function resetVideoState() {
   isPlaying.value = false
   timelineFrameGeneration += 1
   timelineFrames.value = []
+  timelineLoading.value = false
 }
 function selectVideo(id: string) {
   if (selectedVideoId.value === id) return
@@ -300,19 +310,28 @@ function onLoadedMetadata() {
   void refreshTimelineFrames()
 }
 async function refreshTimelineFrames() {
-  const sourceUrl = selectedVideoPlaybackUrl.value
+  const sourceUrl = selectedVideo.value?.url || ''
   const generation = ++timelineFrameGeneration
   timelineFrames.value = []
-  if (!sourceUrl || !videoReady.value || videoError.value) return
+  if (!sourceUrl || !videoReady.value || videoError.value) {
+    timelineLoading.value = false
+    return
+  }
 
+  timelineLoading.value = true
   try {
     const frames = await captureVideoTimelineFrames(sourceUrl, {
       count: 10,
       shouldContinue: () => generation === timelineFrameGeneration && props.open
     })
     if (generation === timelineFrameGeneration) timelineFrames.value = frames
-  } catch {
-    if (generation === timelineFrameGeneration) timelineFrames.value = []
+  } catch (error) {
+    if (generation === timelineFrameGeneration) {
+      timelineFrames.value = []
+      console.error('[capture-video-frame] timeline frames failed', error)
+    }
+  } finally {
+    if (generation === timelineFrameGeneration) timelineLoading.value = false
   }
 }
 function onTimeUpdate() {
@@ -383,10 +402,10 @@ async function confirmCapture() {
   confirming.value = true
   try {
     video.pause()
-    await seekVideoToFrame(video, currentTime.value)
-    const capturedAtMs = Math.max(0, Math.floor((video.currentTime || 0) * 1000))
+    const capturedAt = clampVideoFrameTime(currentTime.value, duration.value)
+    const capturedAtMs = Math.max(0, Math.floor(capturedAt * 1000))
     const name = formatVideoFrameName(source.label, capturedAtMs, new Date())
-    const file = await captureVideoElementFrame(video, name)
+    const file = await captureVideoUrlFrame(source.url, capturedAt, name)
     const url = await uploadImageToOssWithToast(file)
     if (!url) return
     emit('captured', {
@@ -550,11 +569,18 @@ onBeforeUnmount(() => {
   }
 }
 
-.cvfm-video-card__media {
+.cvfm-video-card__shimmer {
   display: block;
   width: 100%;
   height: 62px;
   background: #080b12;
+  pointer-events: none;
+}
+
+.cvfm-video-card__media {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   pointer-events: none;
 }
@@ -713,6 +739,36 @@ onBeforeUnmount(() => {
   background:
     linear-gradient(90deg, rgba(74, 231, 253, 0.08), transparent 45%, rgba(74, 231, 253, 0.08)),
     #0a0e15;
+}
+
+.cvfm-filmstrip__placeholder.is-loading,
+.cvfm-filmstrip.is-loading .cvfm-filmstrip__placeholder {
+  position: relative;
+  overflow: hidden;
+  background: rgba(14, 18, 28, 0.92);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(74, 231, 253, 0.16) 50%,
+      transparent 65%
+    );
+    transform: translateX(-120%);
+    animation: cvfm-filmstrip-shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes cvfm-filmstrip-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
 }
 
 .cvfm-filmstrip__playhead {

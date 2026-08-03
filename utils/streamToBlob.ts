@@ -8,7 +8,9 @@ export async function readableStreamToBlob(
     while (true) {
       const { value, done } = await reader.read()
       if (done) break
-      if (value) chunks.push(value)
+      if (value) {
+        chunks.push(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength) as ArrayBuffer)
+      }
     }
   } finally {
     try {

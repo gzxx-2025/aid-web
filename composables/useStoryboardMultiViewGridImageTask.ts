@@ -1,11 +1,11 @@
 import {
   fetchUserTaskDetailOnce,
-  isBenignTaskSseDisconnectMessage,
   normalizeTaskStatus,
   shouldDeferModalTaskFollowFailure,
   TASK_SSE_TIMEOUT_MS,
   waitUserTaskSseTerminal
 } from '~/composables/useTaskSseFollow'
+import { isBenignTaskSseDisconnectMessage } from '~/utils/taskSseSilentDisconnect'
 import { userStoryboardGenerateMultiViewGridImage } from '~/utils/businessApi'
 import { openRechargeModalFromInsufficientBalance, handleSseErrorRecharge } from '~/utils/api'
 import type {

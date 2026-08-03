@@ -904,6 +904,7 @@ import {
   matchesCreationLiveGenScope
 } from '~/composables/useCreationLiveGenScopeGuard'
 import { openImagePreviewModal } from '~/utils/openImagePreviewModal'
+import { resolveSafeHttpUrl } from '~/utils/safeNavigation'
 import {
   ArrowLeftOutlined,
   UploadOutlined,
@@ -4622,9 +4623,9 @@ function removeReferenceImageAt(index: number) {
 }
 
 function previewReferenceImage(ref: { url?: string; thumbnail?: string }) {
-  const src = ref?.url || ref?.thumbnail
+  const src = resolveSafeHttpUrl(ref?.url || ref?.thumbnail, window.location.href)
   if (!src) return
-  window.open(src, '_blank', 'noopener')
+  window.open(src, '_blank', 'noopener,noreferrer')
 }
 
 function onPreviewReferenceImage() {

@@ -797,7 +797,7 @@ function onOfficialVoiceSelect(voice: OfficialVoicePick) {
     next: { durationMs: media.durationMs, audioFormat: 'mp3' }
   })
   if (!check.ok) {
-    message.warning(check.message)
+    message.warning('message' in check ? check.message : '参考音频不符合要求')
     return
   }
   const k = rowKey(media)
@@ -893,7 +893,7 @@ async function uploadLocalReferenceAudios(files: File[]) {
       next: { durationMs: undefined, audioFormat: ext }
     })
     if (!preCheck.ok) {
-      message.warning(preCheck.message)
+      message.warning('message' in preCheck ? preCheck.message : '参考音频不符合要求')
       break
     }
     const ossUrl = await uploadAudioToOssWithToast(file)
@@ -927,7 +927,7 @@ async function uploadLocalReferenceAudios(files: File[]) {
         } catch {
           /* ignore rollback failure */
         }
-        message.warning(postCheck.message)
+        message.warning('message' in postCheck ? postCheck.message : '参考音频不符合要求')
         break
       }
       selectedList.value = [...selectedList.value, media]

@@ -21,7 +21,9 @@ export function fetchUserProjectDetailOnce(
 
   const promise = userProjectDetail(projectId)
     .then((row) => {
-      resultCache.set(projectId, { at: Date.now(), row })
+      if (inflightByProjectId.get(projectId) === promise) {
+        resultCache.set(projectId, { at: Date.now(), row })
+      }
       return row
     })
     .finally(() => {

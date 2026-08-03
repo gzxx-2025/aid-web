@@ -1,7 +1,7 @@
 <template>
   <div class="mobile-home">
     <div class="mobile-home__panel">
-      <img :src="logoUrl"  class="mobile-home__logo" />
+      <img :src="displayLogoUrl" class="mobile-home__logo" :alt="brandAlt" />
       <div class="mobile-home__hero">
         <img :src="picUrl" alt="首页视觉" class="mobile-home__hero-img" />
       </div>
@@ -15,9 +15,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { message } from 'ant-design-vue'
-import logoUrl from '~/assets/img/home/logo-new.svg'
+import fallbackLogoUrl from '~/assets/img/home/logo-new.svg'
 import picUrl from '~/assets/img/icon/pic.svg'
+import { useAuthPublicConfig } from '~/composables/useAuthPublicConfig'
 
 definePageMeta({
   layout: false
@@ -28,6 +30,11 @@ useHead({
     class: 'mobile-only-shell'
   }
 })
+
+const { platformLogoUrl, siteName, loadPublicConfig } = useAuthPublicConfig()
+const displayLogoUrl = computed(() => platformLogoUrl.value || fallbackLogoUrl)
+const brandAlt = computed(() => siteName.value || 'AID')
+void loadPublicConfig()
 
 async function copyPcUrl() {
   const text = 'https://www.aidstudio.com.cn'

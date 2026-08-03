@@ -62,20 +62,27 @@ export async function fetchProjectStoryboardRecords(
     projectRecordCache.delete(key)
   }
 
+  const entry: RecordCacheEntry = {}
   const promise = userStoryboardRecordListByStoryboard({
     projectId: ctx.projectId,
     episodeId: ctx.episodeId,
     type
   }).then((rows) => {
-    projectRecordCache.set(key, { data: rows })
+    if (projectRecordCache.get(key) === entry) {
+      entry.promise = undefined
+      entry.data = rows
+    }
     return rows
   })
 
-  projectRecordCache.set(key, { promise })
+  entry.promise = promise
+  projectRecordCache.set(key, entry)
   try {
     return await promise
   } catch (e) {
-    projectRecordCache.delete(key)
+    if (projectRecordCache.get(key) === entry) {
+      projectRecordCache.delete(key)
+    }
     throw e
   }
 }

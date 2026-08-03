@@ -480,7 +480,7 @@ export const EMPTY_MODEL_PLACEHOLDER = {
 export function resolveSelectedModelOption<T extends ModelOptionMatchable & { name: string }>(
   options: T[],
   modelId: string | undefined | null,
-  placeholder: T = EMPTY_MODEL_PLACEHOLDER as T
+  placeholder: T = EMPTY_MODEL_PLACEHOLDER as unknown as T
 ): T {
   const id = String(modelId || '').trim()
   if (!id) return placeholder

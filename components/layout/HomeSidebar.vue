@@ -13,7 +13,7 @@
     </template>
     <template v-else>
       <button type="button" class="brand" aria-label="首页" @click="emit('brand')">
-        <img :src="logoUrl" width="111" height="43" alt="" class="logo-img" />
+        <img :src="displayLogoUrl" width="111" height="43" :alt="brandAlt" class="logo-img" />
       </button>
 
       <nav class="nav">
@@ -111,11 +111,16 @@ import myWorkNorIcon from '~/assets/img/icon/myWork-nor.svg'
 import myWorkSelIcon from '~/assets/img/icon/myWork-sel.svg'
 import myAssetNorIcon from '~/assets/img/icon/myAsset-nor.svg'
 import myAssetSelIcon from '~/assets/img/icon/myAsset-sel.svg'
-import logoUrl from '~/assets/img/home/logo.svg'
+import fallbackLogoUrl from '~/assets/img/home/logo.svg'
 import starlightCoinUrl from '~/assets/img/home/starlightCoin.svg'
 import navActiveBg from '~/assets/img/home/Rectangle.svg'
+import { useAuthPublicConfig } from '~/composables/useAuthPublicConfig'
 
 const navActiveBgUrl = `url("${navActiveBg}")`
+const { platformLogoUrl, siteName, loadPublicConfig } = useAuthPublicConfig()
+const displayLogoUrl = computed(() => platformLogoUrl.value || fallbackLogoUrl)
+const brandAlt = computed(() => siteName.value || 'AID')
+void loadPublicConfig()
 
 const props = withDefaults(
   defineProps<{
