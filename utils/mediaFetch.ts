@@ -11,7 +11,7 @@ function isSameOriginUrl(url: string): boolean {
 
 function buildMediaProxyUrl(remoteUrl: string): string {
   const params = new URLSearchParams({ url: remoteUrl })
-  return `${resolveSameOriginApiUrl('/api/media-proxy')}?${params.toString()}`
+  return `${resolveSameOriginApiUrl('/media/proxy')}?${params.toString()}`
 }
 
 /**
@@ -32,7 +32,7 @@ export function resolveMediaPlaybackUrl(url: string): string {
 }
 
 /**
- * 拉取媒体 Blob。跨域 CDN 统一走同源 `/api/media-proxy`，避免浏览器 CORS 控制台报错。
+ * 拉取媒体 Blob。跨域 CDN 统一走同源 `/media/proxy`，避免浏览器 CORS 控制台报错。
  */
 export async function fetchMediaBlob(url: string): Promise<Blob | null> {
   const remote = String(url || '').trim()

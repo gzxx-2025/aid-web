@@ -208,6 +208,7 @@
                   @load="markHeroVideoMediaReady"
                   @ended="onHeroVideoEnded"
                   @pause="onHeroVideoPause"
+                  @click.stop="toggleHeroVideoPlayback"
                 />
                 <button
                   v-if="dubbingPreviewUrl && !heroVideoPlaying && heroVideoMediaReady"
@@ -215,7 +216,7 @@
                   class="dubbing-video-play-btn"
                   title="播放视频"
                   aria-label="播放视频"
-                  @click.stop="handlePlayHeroVideo"
+                  @click.stop="toggleHeroVideoPlayback"
                 />
                 <div v-if="dubbingPreviewUrl" class="dubbing-hero-top-actions">
                   <a-button
@@ -330,6 +331,7 @@ import {
 import HorizontalScrollTabBar from '~/components/common/HorizontalScrollTabBar.vue'
 import HistoryRecordWrap from '~/components/common/HistoryRecordWrap.vue'
 import ShimmerVideo from '~/components/common/ShimmerVideo.vue'
+import { useVideoPlaybackSpaceShortcut } from '~/composables/useVideoPlaybackSpaceShortcut'
 import DubbingEditLeftPanel from './DubbingEditLeftPanel.vue'
 import dialogSelectSelIcon from '@/assets/img/icon/dialog-select-sel.svg'
 import deleteIcon from '@/assets/img/icon/del-black.svg'
@@ -2035,21 +2037,36 @@ function resetHeroVideoPreviewState() {
   pauseHeroVideoPlayback()
 }
 
-function handlePlayHeroVideo() {
+async function toggleHeroVideoPlayback() {
   const url = dubbingPreviewUrl.value
   if (!url) return
 
   const videoEl = resolveHeroVideoEl()
   if (!videoEl) return
 
+  if (!videoEl.paused) {
+    videoEl.pause()
+    videoEl.muted = true
+    heroVideoPlaying.value = false
+    return
+  }
+
+  if (videoEl.ended) videoEl.currentTime = 0
   videoEl.muted = false
   heroVideoPlaying.value = true
-  void videoEl.play().catch(() => {
+  try {
+    await videoEl.play()
+  } catch {
     heroVideoPlaying.value = false
     videoEl.muted = true
     message.warning('无法自动播放，请稍后重试')
-  })
+  }
 }
+
+const canToggleHeroVideoWithSpace = computed(
+  () => modalOpen.value && Boolean(dubbingPreviewUrl.value) && heroVideoMediaReady.value
+)
+useVideoPlaybackSpaceShortcut(canToggleHeroVideoWithSpace, toggleHeroVideoPlayback)
 
 function onHeroVideoEnded() {
   heroVideoPlaying.value = false

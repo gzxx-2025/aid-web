@@ -165,7 +165,6 @@
                   :maxlength="8"
                   autocomplete="off"
                   name="login-invite"
-                  @blur="checkInviteCode"
                 >
                   <template #prefix>
                     <span class="input-prefix-wrap">
@@ -174,9 +173,6 @@
                     </span>
                   </template>
                 </a-input>
-                <p v-if="inviteHint" class="invite-hint" :class="{ 'is-valid': inviteCheckValid }">
-                  {{ inviteHint }}
-                </p>
               </a-form-item>
               <a-form-item name="agreement" class="agreement-form-item" :rules="agreementRules">
                 <a-checkbox v-model:checked="quickLoginForm.agreement">
@@ -305,7 +301,7 @@ import type { LoginData } from '~/types/business-api'
 import { useAuthPublicConfig } from '~/composables/useAuthPublicConfig'
 import { useBehaviorCaptcha } from '~/composables/useBehaviorCaptcha'
 import { useTacPageHead } from '~/composables/useTacPageHead'
-import { authLogin, authSendCode, userInviteCheck, wechatLoginCheck, wechatLoginQrcode } from '~/utils/businessApi'
+import { authLogin, authSendCode, wechatLoginCheck, wechatLoginQrcode } from '~/utils/businessApi'
 import { setAuthLoginChannel, type AuthLoginChannel } from '~/utils/authLoginChannel'
 import { normalizeInviteCode, withLoginInviteCode } from '~/utils/authLoginInvite'
 import { clearPendingCaptchaToken, setPendingCaptchaToken } from '~/utils/captchaToken'
@@ -412,41 +408,14 @@ const quickLoginForm = reactive({
   agreement: false
 })
 
-const inviteHint = ref('')
-const inviteCheckValid = ref(false)
 /** 当前微信扫码会话已绑定的邀请码（用于变更后重新拉码） */
 let wechatInviteBound = ''
-let inviteCheckTimer: ReturnType<typeof setTimeout> | null = null
 let inviteWechatRefreshTimer: ReturnType<typeof setTimeout> | null = null
 /** 首屏 onMounted 拉码完成前，忽略邀请码 watch 触发的重复刷新 */
 const loginPageReady = ref(false)
 
 function normalizedInviteCode(): string | undefined {
   return normalizeInviteCode(quickLoginForm.inviteCode)
-}
-
-async function checkInviteCode() {
-  const code = normalizedInviteCode()
-  if (!code) {
-    inviteHint.value = ''
-    inviteCheckValid.value = false
-    return
-  }
-  try {
-    const data = await userInviteCheck({ inviteCode: code })
-    if (data.valid) {
-      inviteCheckValid.value = true
-      inviteHint.value = data.inviterNickName
-        ? `您正在接受 ${data.inviterNickName} 的邀请`
-        : '邀请码有效'
-    } else {
-      inviteCheckValid.value = false
-      inviteHint.value = data.reason || '邀请码无效（注册时将忽略）'
-    }
-  } catch {
-    inviteCheckValid.value = false
-    inviteHint.value = ''
-  }
 }
 
 /** 邀请码变更后需重新获取二维码，否则扫码会话仍是旧的无码会话 */
@@ -464,10 +433,6 @@ function scheduleWechatQrRefreshForInvite() {
 watch(
   () => quickLoginForm.inviteCode,
   () => {
-    if (inviteCheckTimer) clearTimeout(inviteCheckTimer)
-    inviteCheckTimer = setTimeout(() => {
-      void checkInviteCode()
-    }, 400)
     if (loginPageReady.value) scheduleWechatQrRefreshForInvite()
   }
 )
@@ -670,7 +635,6 @@ onUnmounted(() => {
   stopQuickSendCodeCountdown()
   destroyCaptcha()
   clearPendingCaptchaToken()
-  if (inviteCheckTimer) clearTimeout(inviteCheckTimer)
   if (inviteWechatRefreshTimer) clearTimeout(inviteWechatRefreshTimer)
 })
 
@@ -700,7 +664,8 @@ async function doSendQuickLoginCode(captchaToken: string) {
     {
       target: account,
       codeType: inferCodeTypeByTarget(account),
-      scene: 'login'
+      scene: 'login',
+      inviteCode: normalizedInviteCode()
     },
     captchaToken || undefined
   )
@@ -798,8 +763,7 @@ onMounted(() => {
   loadPublicConfig()
   const routeInvite = String(route.query.invite || route.query.inviteCode || '').trim()
   if (routeInvite) {
-    quickLoginForm.inviteCode = routeInvite.slice(0, 8)
-    void checkInviteCode()
+    quickLoginForm.inviteCode = routeInvite
   }
   void openWechatLogin().finally(() => {
     loginPageReady.value = true
@@ -1111,16 +1075,6 @@ watch(
   margin-bottom: 12px;
 }
 
-.invite-hint {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: rgba(142, 151, 165, 1);
-  line-height: 1.4;
-}
-
-.invite-hint.is-valid {
-  color: #4ae7fd;
-}
 .agreement-text {
   color: rgba(142, 151, 165, 1);
   font-size: 14px;

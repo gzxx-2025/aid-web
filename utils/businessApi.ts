@@ -202,8 +202,6 @@ import type {
   ScriptSplitPreviewRequest,
   ScriptSplitPreviewVO,
   ScriptSplitConfirmVO,
-  InviteCodeCheckRequest,
-  InviteCodeCheckVO,
   InviteInfoVO,
   InviteUsersRequest,
   InvitedUserVO,
@@ -320,7 +318,11 @@ export async function authLogout(): Promise<void> {
 /** 3. 发送验证码（开启行为验证码时由请求拦截器或显式 headers 携带 captcha-token） */
 export async function authSendCode(body: SendCodeRequest, captchaToken?: string): Promise<void> {
   const headers = captchaToken ? { 'captcha-token': captchaToken } : undefined
-  await request.post<ApiEnvelope>('/auth/sendCode', body, { headers })
+  const inviteCode = String(body.inviteCode || '').trim()
+  const payload: SendCodeRequest = { ...body }
+  if (inviteCode) payload.inviteCode = inviteCode
+  else delete payload.inviteCode
+  await request.post<ApiEnvelope>('/auth/sendCode', payload, { headers })
 }
 
 /** 6. 找回密码 */
@@ -2258,12 +2260,6 @@ export function triggerBrowserBlobDownload(blob: Blob, filename: string) {
       /* ignore */
     }
   }, 2_000)
-}
-
-/** 邀请码预校验（匿名）POST /api/user/invite/check */
-export async function userInviteCheck(body: InviteCodeCheckRequest): Promise<InviteCodeCheckVO> {
-  const res = await request.post<ApiEnvelope<InviteCodeCheckVO>>('/api/user/invite/check', body)
-  return unwrap(res)
 }
 
 /** 我的邀请信息 POST /api/user/invite/info */

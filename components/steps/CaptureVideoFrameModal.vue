@@ -66,6 +66,8 @@
             crossorigin="anonymous"
             playsinline
             preload="auto"
+            aria-label="视频预览，点击或按空格播放或暂停"
+            @click="togglePlayback"
             @loadedmetadata="onLoadedMetadata"
             @timeupdate="onTimeUpdate"
             @play="onVideoPlay"
@@ -182,14 +184,17 @@ import {
   type StoryboardVideoPick
 } from '~/utils/collectProjectStoryboardVideos'
 import {
+  clampVideoFrameTime,
   captureVideoElementFrame,
   captureVideoTimelineFrames,
+  seekVideoToFrame,
   type CapturedVideoFrame
 } from '~/utils/videoFrameCapture'
 import { formatVideoFrameName } from '~/utils/videoFrameName'
 import { uploadImageToOssWithToast } from '~/utils/ossUpload'
 import { emptyImageIconUrl } from '~/utils/emptyImageIcon'
 import { resolveMediaPlaybackUrl } from '~/utils/mediaFetch'
+import { useVideoPlaybackSpaceShortcut } from '~/composables/useVideoPlaybackSpaceShortcut'
 
 interface Props {
   open: boolean
@@ -236,6 +241,10 @@ const timelineProgress = computed(() => {
   if (!duration.value) return 0
   return Math.min(100, Math.max(0, (currentTime.value / duration.value) * 100))
 })
+const canTogglePlaybackWithSpace = computed(
+  () => modalOpen.value && videoReady.value && !videoError.value && !confirming.value
+)
+useVideoPlaybackSpaceShortcut(canTogglePlaybackWithSpace, togglePlayback)
 let resizeObserver: ResizeObserver | null = null
 let timelineFrameGeneration = 0
 let playbackAnimationFrame: number | null = null
@@ -333,7 +342,7 @@ function onVideoError() {
 }
 async function togglePlayback() {
   const video = videoRef.value
-  if (!video || !videoReady.value || videoError.value) return
+  if (!video || !videoReady.value || videoError.value || confirming.value) return
   if (!video.paused) {
     video.pause()
     return
@@ -363,33 +372,7 @@ function seekToBoundary(boundary: 'start' | 'end') {
     setVideoTime(0)
     return
   }
-  // 精确 duration 可能落在已结束后的黑帧，回退约一帧定位到最后可解码画面。
-  setVideoTime(Math.max(0, duration.value - 1 / 30))
-}
-function waitForSeek(video: HTMLVideoElement, target: number): Promise<void> {
-  const safeTarget = Math.min(Math.max(0, target), duration.value || 0)
-  if (!video.seeking && Math.abs(video.currentTime - safeTarget) < 0.005) {
-    return Promise.resolve()
-  }
-  return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => finish(new Error('视频定位超时')), 4000)
-    const onSeeked = () => finish()
-    const onError = () => finish(new Error('视频定位失败'))
-    const finish = (error?: Error) => {
-      window.clearTimeout(timer)
-      video.removeEventListener('seeked', onSeeked)
-      video.removeEventListener('error', onError)
-      if (error) reject(error)
-      else resolve()
-    }
-    video.addEventListener('seeked', onSeeked)
-    video.addEventListener('error', onError)
-    try {
-      video.currentTime = safeTarget
-    } catch (error) {
-      finish(error instanceof Error ? error : new Error('视频定位失败'))
-    }
-  })
+  setVideoTime(clampVideoFrameTime(duration.value, duration.value))
 }
 
 async function confirmCapture() {
@@ -400,7 +383,7 @@ async function confirmCapture() {
   confirming.value = true
   try {
     video.pause()
-    await waitForSeek(video, currentTime.value)
+    await seekVideoToFrame(video, currentTime.value)
     const capturedAtMs = Math.max(0, Math.floor((video.currentTime || 0) * 1000))
     const name = formatVideoFrameName(source.label, capturedAtMs, new Date())
     const file = await captureVideoElementFrame(video, name)
@@ -414,7 +397,8 @@ async function confirmCapture() {
       capturedAtMs
     })
     modalOpen.value = false
-  } catch {
+  } catch (error) {
+    console.error('[capture-video-frame] capture failed', error)
     message.error('截帧失败，请稍后重试')
   } finally {
     confirming.value = false
@@ -627,6 +611,7 @@ onBeforeUnmount(() => {
   display: block;
   width: 100%;
   height: min(52vh, 480px);
+  cursor: pointer;
   object-fit: contain;
 }
 .cvfm-preview__error {

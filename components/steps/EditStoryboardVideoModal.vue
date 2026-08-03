@@ -218,6 +218,7 @@
                       @load="markVideoPreviewMediaReady(idx)"
                       @ended="onVideoPreviewEnded(idx)"
                       @pause="onVideoPreviewPause(idx)"
+                      @click.stop="toggleVideoPreviewPlayback(idx)"
                     />
                     <div v-else-if="!isVideoCanvasItemGenerating(idx)" class="video-placeholder">
                       <VideoCameraOutlined />
@@ -241,7 +242,7 @@
                       class="dubbing-video-play-btn"
                       title="播放视频"
                       aria-label="播放视频"
-                      @click.stop="handlePlayVideo(idx)"
+                      @click.stop="toggleVideoPreviewPlayback(idx)"
                     />
                     <div v-if="v.url" class="video-top-actions">
                       <a-button
@@ -314,6 +315,7 @@
                       @load="markVideoPreviewMediaReady(idx)"
                       @ended="onVideoPreviewEnded(idx)"
                       @pause="onVideoPreviewPause(idx)"
+                      @click.stop="toggleVideoPreviewPlayback(idx)"
                     />
                     <div v-else-if="!isVideoCanvasItemGenerating(idx)" class="video-placeholder">
                       <VideoCameraOutlined />
@@ -337,7 +339,7 @@
                       class="dubbing-video-play-btn"
                       title="播放视频"
                       aria-label="播放视频"
-                      @click.stop="handlePlayVideo(idx)"
+                      @click.stop="toggleVideoPreviewPlayback(idx)"
                     />
                     <div v-if="v.url" class="video-top-actions">
                       <a-button
@@ -925,6 +927,7 @@ import {
 import HorizontalScrollTabBar from '~/components/common/HorizontalScrollTabBar.vue'
 import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import ShimmerVideo from '~/components/common/ShimmerVideo.vue'
+import { useVideoPlaybackSpaceShortcut } from '~/composables/useVideoPlaybackSpaceShortcut'
 import HistoryRecordWrap from '~/components/common/HistoryRecordWrap.vue'
 import EllipsisTooltip from '~/components/common/EllipsisTooltip.vue'
 import StoryboardGeneratePanel from './StoryboardGeneratePanel.vue'
@@ -5251,24 +5254,53 @@ function pauseAllVideoPreviews(exceptIdx = -1) {
   })
 }
 
-function handlePlayVideo(idx: number) {
-  const list = props.scenes[currentSceneIndex.value]?.videos || []
-  const v = list[idx]
+async function toggleVideoPreviewPlayback(idx: number) {
+  const v = currentSceneVideos.value[idx]
   if (!v?.url) return
-
-  pauseAllVideoPreviews(idx)
 
   const videoEl = getVideoPreviewEl(idx)
   if (!videoEl) return
 
+  if (!videoEl.paused) {
+    videoEl.pause()
+    videoEl.muted = true
+    playingVideoIdx.value = -1
+    return
+  }
+
+  pauseAllVideoPreviews(idx)
+  if (videoEl.ended) videoEl.currentTime = 0
   videoEl.muted = false
   playingVideoIdx.value = idx
-  void videoEl.play().catch(() => {
+  selectedVideoIdx.value = idx
+  try {
+    await videoEl.play()
+  } catch {
     playingVideoIdx.value = -1
     videoEl.muted = true
     message.warning('无法自动播放，请稍后重试')
-  })
+  }
 }
+
+const canToggleVideoPreviewWithSpace = computed(
+  () => modalOpen.value && currentSceneVideos.value.some((video) => Boolean(video?.url))
+)
+
+function toggleSelectedVideoPreviewPlayback() {
+  const currentPlayingIdx = playingVideoIdx.value
+  if (currentPlayingIdx >= 0) {
+    void toggleVideoPreviewPlayback(currentPlayingIdx)
+    return
+  }
+
+  const selectedIdx = selectedVideoIdx.value
+  const targetIdx = currentSceneVideos.value[selectedIdx]?.url
+    ? selectedIdx
+    : currentSceneVideos.value.findIndex((video) => Boolean(video?.url))
+  if (targetIdx >= 0) void toggleVideoPreviewPlayback(targetIdx)
+}
+
+useVideoPlaybackSpaceShortcut(canToggleVideoPreviewWithSpace, toggleSelectedVideoPreviewPlayback)
 
 function onVideoPreviewEnded(idx: number) {
   if (playingVideoIdx.value !== idx) return

@@ -96,6 +96,7 @@ export default defineNuxtConfig({
     storesDirs: ['./stores/**']
   },
   runtimeConfig: {
+    mediaProxyAllowedHosts: env.NUXT_MEDIA_PROXY_ALLOWED_HOSTS || '',
     public: {
       // 图形验证码地址（可在 .env 里通过 NUXT_PUBLIC_CAPTCHA_PATH 覆盖）
       captchaPath: '/api/auth/captchaImage',
