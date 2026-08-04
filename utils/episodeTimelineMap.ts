@@ -319,7 +319,7 @@ export function mapServerTimelineToUi(timeline: TimelineData | null | undefined)
           recognitionError: sub.recognitionError ?? null
         })
       }
-      if (!cueIndex && text && voiceUrl) {
+      if (!cueIndex && text) {
         const subtitleDuration = Math.min(duration, positiveNum(voice.durationSeconds, duration))
         subtitleItems.push({
           id: `sub-${id}`,
@@ -329,7 +329,7 @@ export function mapServerTimelineToUi(timeline: TimelineData | null | undefined)
           fontColor,
           videoClipId: id,
           start: cursor,
-          // 兼容字幕没有逐句时间戳时，只在独立配音的真实时长窗口内显示。
+          // 独立配音存在时跟随其真实时长；原生音画视频没有独立配音时覆盖整个视频片段。
           duration: subtitleDuration,
           show: true,
           sourceMediaFingerprint: sub.sourceMediaFingerprint ?? null,

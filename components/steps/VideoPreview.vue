@@ -1778,7 +1778,7 @@ function applyDubbingPanelToTimeline(index: number, dub: DubbingPanel): boolean 
   const hasTimedSubtitle = subtitleItems.value.some((s) => s.videoClipId === clip.id && s.cue)
   if (hasTimedSubtitle && sub?.id === `sub-${clip.id}`) {
     subtitleItems.value = subtitleItems.value.filter((item) => item.id !== sub.id)
-  } else if (subtitleText && voiceUrl && !hasTimedSubtitle) {
+  } else if (subtitleText && !hasTimedSubtitle) {
     const linkedVoice = voiceItems.value.find((v) => v.videoClipId === clip.id)
     const subtitleDuration = resolveUntimedSubtitleDuration(clip, linkedVoice)
     if (sub) {
@@ -1796,8 +1796,6 @@ function applyDubbingPanelToTimeline(index: number, dub: DubbingPanel): boolean 
         duration: subtitleDuration
       })
     }
-  } else if (!voiceUrl && sub?.id === `sub-${clip.id}`) {
-    subtitleItems.value = subtitleItems.value.filter((item) => item.id !== sub.id)
   } else if (!subtitleText && sub) {
     sub.text = ''
   }
@@ -2128,7 +2126,8 @@ function buildTimelineFromProps(options?: { showSuccessMessage?: boolean }): boo
       nextVoice.push(timelineVoice)
     }
 
-    if (subtitleText && voiceUrl) {
+    // 原生音画视频没有独立配音 URL，字幕仍应按分镜台词创建并覆盖整个视频片段。
+    if (subtitleText) {
       nextSub.push({
         id: `sub-${clip.id}`,
         kind: 'subtitle',
