@@ -43,11 +43,15 @@
             @click="selectAgent(agent)"
           >
             <div class="agent-card__avatar-wrap">
-              <img
+              <ShimmerImage
                 v-if="agent.thumbnail"
                 :src="agent.thumbnail"
                 :alt="agent.name"
-                class="agent-card__avatar"
+                img-class="agent-card__avatar"
+                wrapper-class="agent-card__avatar-shimmer"
+                object-fit="cover"
+                reveal-direction="fade"
+                :min-shimmer-ms="280"
               />
               <div v-else class="agent-card__avatar agent-card__avatar--placeholder">
                 {{ agent.name.slice(0, 1) }}
@@ -120,6 +124,7 @@
 import { computed, ref, watch } from 'vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import ModalTitleWatermark from '~/components/ModalTitleWatermark.vue'
+import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import { userModelList, userModelListByFunc } from '~/utils/businessApi'
 import type { AiModelType, UserModelListItem } from '~/types/business-api'
 import { mapUserModelListItemToPickerOption } from '~/utils/userModelOption'
@@ -515,10 +520,21 @@ html.app-shell-create .ant-modal.agent-picker-modal .ant-modal-body {
   padding: 14px 12px 10px;
 }
 
+.agent-card--agent .agent-card__avatar-shimmer,
 .agent-card--agent .agent-card__avatar {
   width: 40px;
   height: 40px;
   border-radius: 8px;
+}
+
+.agent-card--agent :deep(.agent-card__avatar-shimmer) {
+  overflow: hidden;
+}
+
+.agent-card--agent :deep(.agent-card__avatar) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .agent-card--agent .agent-card__avatar--placeholder {

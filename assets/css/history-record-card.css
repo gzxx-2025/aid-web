@@ -55,6 +55,20 @@
   cursor: not-allowed;
 }
 
+/* 删除图标：默认可删项隐藏，悬停或选中时显示 */
+.history-item .history-delete-icon {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.history-item:hover .history-delete-icon,
+.history-item.active .history-delete-icon,
+.history-item .history-delete-icon:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .history-set-main-btn-fade-enter-active,
 .history-set-main-btn-fade-leave-active {
   transition:

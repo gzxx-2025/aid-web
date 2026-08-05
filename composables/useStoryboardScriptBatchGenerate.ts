@@ -8,7 +8,7 @@ import {
   userStoryboardGenerateScript,
   userStoryboardList
 } from '~/utils/businessApi'
-import { fetchFlowUserTaskListOnce, filterUserTaskRowsForEpisode } from '~/utils/userTaskListFlowOnce'
+import { fetchFlowUserTaskList, filterUserTaskRowsForEpisode, beginFlowTaskListQuietWindow, endFlowTaskListQuietWindow } from '~/utils/userTaskListFlowOnce'
 import { requestCancelUserTaskById } from '~/utils/userTaskCancelFlow'
 import {
   formatPartialFailedMessage,
@@ -615,13 +615,15 @@ function createStoryboardScriptBatchGenerate() {
     }
 
     const gen = ++resumeFollowGeneration
+    beginFlowTaskListQuietWindow(ctx.projectId)
+    try {
 
     let tasks: UserTaskRow[] = []
     let taskListOk = true
     try {
       /** 剧集隔离：禁止把其它集的分镜脚本任务恢复到本集 */
       tasks = filterUserTaskRowsForEpisode(
-        await fetchFlowUserTaskListOnce(ctx.projectId),
+        await fetchFlowUserTaskList(ctx.projectId, { intent: 'read' }),
         ctx.episodeId
       )
     } catch {
@@ -815,6 +817,9 @@ function createStoryboardScriptBatchGenerate() {
     } else {
       sbLog('restore: 无 generating 标记也无 taskId → 不处理')
     }
+    } finally {
+      endFlowTaskListQuietWindow(ctx.projectId)
+    }
     })()
 
     restoreSessionInFlight = pending
@@ -877,7 +882,7 @@ function createStoryboardScriptBatchGenerate() {
         try {
           /** 剧集隔离：busy 续跟也只认本集任务 */
           tasks = filterUserTaskRowsForEpisode(
-            await fetchFlowUserTaskListOnce(ctx.projectId),
+            await fetchFlowUserTaskList(ctx.projectId, { intent: 'read' }),
             ctx.episodeId
           )
         } catch {

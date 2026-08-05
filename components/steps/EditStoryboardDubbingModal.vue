@@ -35,8 +35,26 @@
               <div v-if="isSceneGenerating(index)" class="thumbnail-loading-wrap">
                 <LoadingOutlined spin class="thumbnail-loading-icon" />
               </div>
-              <div v-else-if="item.videoUrl" class="thumbnail-video-wrap">
-                <video :src="item.videoUrl" class="thumbnail-video" muted />
+              <div v-else-if="item.coverImageUrl" class="thumbnail-video-wrap">
+                <ShimmerImage
+                  :src="item.coverImageUrl"
+                  img-class="thumbnail-video"
+                  object-fit="cover"
+                  reveal-direction="fade"
+                />
+              </div>
+              <div
+                v-else-if="item.videoUrl && index === currentSceneIndex"
+                class="thumbnail-video-wrap"
+              >
+                <ShimmerVideo
+                  :src="item.videoUrl"
+                  video-class="thumbnail-video"
+                  object-fit="cover"
+                  reveal-direction="fade"
+                  preload="metadata"
+                  :gated="false"
+                />
               </div>
               <div v-else class="thumbnail-placeholder">
                 <VideoCameraOutlined />
@@ -142,12 +160,23 @@
                     >
                       <LoadingOutlined spin class="history-generating-mask__icon" />
                     </div>
-                    <video
+                    <ShimmerVideo
+                      v-else-if="nav.url && selectedNavKey === nav.key"
+                      :src="nav.url"
+                      video-class="history-thumb-video"
+                      object-fit="cover"
+                      reveal-direction="fade"
+                      preload="metadata"
+                      :gated="false"
+                    />
+                    <ShimmerVideo
                       v-else-if="nav.url"
                       :src="nav.url"
-                      class="history-thumb-video"
-                      muted
-                      playsinline
+                      video-class="history-thumb-video"
+                      object-fit="cover"
+                      reveal-direction="fade"
+                      lazy
+                      preload="metadata"
                     />
                     <div v-else class="history-empty">—</div>
                     <span
@@ -158,7 +187,7 @@
                       <img :src="dialogSelectSelIcon" alt="" class="history-main-mark__icon" />
                     </span>
                     <div
-                      v-if="selectedNavKey === nav.key && canDeleteHistoryDubbing(nav)"
+                      v-if="canDeleteHistoryDubbing(nav)"
                       class="history-delete-icon"
                       role="button"
                       tabindex="0"
@@ -205,6 +234,7 @@
                   video-class="dubbing-hero-video"
                   object-fit="contain"
                   reveal-direction="fade"
+                  preload="metadata"
                   @load="markHeroVideoMediaReady"
                   @ended="onHeroVideoEnded"
                   @pause="onHeroVideoPause"
@@ -330,7 +360,9 @@ import {
 } from '@ant-design/icons-vue'
 import HorizontalScrollTabBar from '~/components/common/HorizontalScrollTabBar.vue'
 import HistoryRecordWrap from '~/components/common/HistoryRecordWrap.vue'
+import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import ShimmerVideo from '~/components/common/ShimmerVideo.vue'
+import { resolveStoryboardPanelCoverImage } from '~/utils/storyboardImageCover'
 import { useVideoPlaybackSpaceShortcut } from '~/composables/useVideoPlaybackSpaceShortcut'
 import DubbingEditLeftPanel from './DubbingEditLeftPanel.vue'
 import dialogSelectSelIcon from '@/assets/img/icon/dialog-select-sel.svg'
@@ -467,7 +499,8 @@ const { headerTabs, projectRecordRows, refreshHeaderTabs } = useStoryboardModalH
   creationStore,
   route,
   headerOptions: () => ({
-    resolveFallbackThumbnailUrl: (sceneIndex) => getVideoUrl(sceneIndex),
+    // 顶部 Tab 用分镜图封面，避免打开弹窗并发拉齐 mp4
+    resolveFallbackThumbnailUrl: (sceneIndex) => resolveDubbingCoverImageUrl(sceneIndex),
     resolveDubbingConfigured: (sceneIndex, composeRows) => {
       const panel = props.dubbingPanels[sceneIndex]
       if (isPanelDubbingConfigured(panel)) return true
@@ -1860,6 +1893,15 @@ function getVideoUrl(index: number): string {
   return ''
 }
 
+function resolveDubbingCoverImageUrl(index: number): string {
+  const sp = scriptPanels.value[index]
+  const cover = resolveStoryboardPanelCoverImage({
+    images: sp?.images,
+    finalImageUrl: sp?.finalImageUrl
+  })
+  return String(cover?.thumbnail || cover?.url || '').trim()
+}
+
 function panelHasStoryboardVideoUrl(vPanels: StoryboardVideoPanel[], idx: number): boolean {
   const panel = vPanels[idx]
   return !!getPanelStoryboardVideoUrl(panel)
@@ -1911,7 +1953,7 @@ const headerTabsForDisplay = computed(() => {
     sceneIndex,
     storyboardId: resolveStoryboardIdForIndex(sceneIndex) ?? undefined,
     name: panel.title || `分镜${sceneIndex + 1}`,
-    thumbnailUrl: getVideoUrl(sceneIndex),
+    thumbnailUrl: resolveDubbingCoverImageUrl(sceneIndex),
     hasFinalAsset: false,
     dubbingConfigured: isPanelDubbingConfigured(panel)
   }))
@@ -1920,13 +1962,19 @@ const headerTabsForDisplay = computed(() => {
 const sceneItems = computed(() =>
   props.dubbingPanels.map((p, i) => {
     const tab = headerTabsForDisplay.value[i]
+    const coverImageUrl = resolveDubbingCoverImageUrl(i)
     const sourceVideoUrl = getVideoUrl(i)
-    const videoUrl = tab?.thumbnailUrl || sourceVideoUrl
-    const hasVideo = !!videoUrl
+    const tabThumb = String(tab?.thumbnailUrl || '').trim()
+    const tabIsImage = /\.(png|jpe?g|webp|gif|bmp|svg)(\b|$)/i.test(tabThumb.split('?')[0] || '')
+    const videoUrl = coverImageUrl
+      ? ''
+      : sourceVideoUrl || (!tabIsImage ? tabThumb : '')
+    const hasVideo = !!(coverImageUrl || videoUrl || sourceVideoUrl)
     const configured = tab?.dubbingConfigured ?? isPanelDubbingConfigured(p)
     return {
       id: p.id,
       name: formatDubbingSceneTabPrimaryLabel(p.title || '', hasVideo, i),
+      coverImageUrl: coverImageUrl || (tabIsImage ? tabThumb : ''),
       videoUrl,
       configured
     }

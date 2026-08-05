@@ -121,10 +121,30 @@
     max-width: min(420Px, calc(100vw - 32Px)) !important;
   }
 
-  /* 发布至案例广场：固定 560，勿吃默认大弹窗宽度 */
+  /* 发布至案例广场：固定 560，勿吃默认大弹窗宽度；底栏强制横排 */
   html.app-shell-create .ant-modal-wrap.create-flow-modal.publish-case-plaza-modal-wrap .ant-modal {
     width: min(560Px, calc(100vw - 32Px)) !important;
     max-width: min(560Px, calc(100vw - 32Px)) !important;
+  }
+
+  html.app-shell-create .publish-case-plaza-modal-wrap .ant-modal-footer {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+
+  html.app-shell-create .publish-case-plaza-modal-wrap .ant-modal-footer .ant-btn {
+    display: inline-flex !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* 批量生成卡片：矮屏也随视口略增高，避免相对壳层过扁 */
+  html.app-shell-create .batch-generate-asset-wrap .bgam-card-media,
+  html.app-shell-create .batch-generate-storyboard-wrap .bgsm-card-media {
+    height: clamp(132px, 18dvh, 180px) !important;
   }
 
   html.app-shell-create .ant-modal-wrap.create-flow-modal.music-picker-wrap .ant-modal,

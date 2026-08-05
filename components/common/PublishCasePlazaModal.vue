@@ -405,4 +405,60 @@ async function handleConfirm(e: Event) {
 .publish-case-plaza__file {
   display: none;
 }
+
+/* 全局 create 主题把 textarea 边框设为 transparent，本弹窗需要可见边框 + focus 高亮 */
+.publish-case-plaza__field :deep(.ant-input-textarea textarea) {
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04) !important;
+  padding: 10px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.publish-case-plaza__field :deep(.ant-input-textarea:hover textarea) {
+  border-color: rgba(74, 231, 253, 0.45) !important;
+}
+
+.publish-case-plaza__field :deep(.ant-input-textarea-focused textarea),
+.publish-case-plaza__field :deep(.ant-input-textarea textarea:focus),
+.publish-case-plaza__field :deep(.ant-input-textarea textarea:focus-visible) {
+  border-color: rgba(0, 171, 216, 0.65) !important;
+  box-shadow: 0 0 0 2px rgba(14, 89, 250, 0.2) !important;
+}
+</style>
+
+<style>
+.publish-case-plaza-modal-wrap .ant-modal {
+  width: min(560px, calc(100vw - 32px)) !important;
+  max-width: min(560px, calc(100vw - 32px)) !important;
+}
+
+.publish-case-plaza-modal-wrap .ant-modal-content {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.publish-case-plaza-modal-wrap .ant-modal-footer {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 8px !important;
+  text-align: end !important;
+}
+
+.publish-case-plaza-modal-wrap .ant-modal-footer .ant-btn {
+  display: inline-flex !important;
+  width: auto !important;
+  min-width: 88px !important;
+  flex: 0 0 auto !important;
+  margin-inline-start: 0 !important;
+}
+
+.publish-case-plaza-modal-wrap .ant-modal-body .ant-input-textarea textarea {
+  min-height: 110px;
+  max-height: min(220px, 36vh);
+  overflow-y: auto !important;
+}
 </style>

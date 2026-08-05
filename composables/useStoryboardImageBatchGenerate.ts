@@ -12,7 +12,9 @@ import {
   userStoryboardGenerateImage
 } from '~/utils/businessApi'
 import {
-  fetchFlowUserTaskListOnce,
+  beginFlowTaskListQuietWindow,
+  endFlowTaskListQuietWindow,
+  fetchFlowUserTaskList,
   filterUserTaskRowsForEpisode
 } from '~/utils/userTaskListFlowOnce'
 import { requestCancelUserTaskById } from '~/utils/userTaskCancelFlow'
@@ -383,7 +385,7 @@ export function useStoryboardImageBatchGenerate() {
         creationStore.currentEpisodeId
       )
     }
-    const rows = await fetchFlowUserTaskListOnce(pid)
+    const rows = await fetchFlowUserTaskList(pid, { intent: 'read' })
     cachedRecentProjectTasks = { projectId: pid, at: now, rows }
     /** 剧集隔离：禁止把其它集的分镜图任务恢复到本集 */
     return filterUserTaskRowsForEpisode(rows, creationStore.currentEpisodeId)
@@ -1696,7 +1698,8 @@ export function useStoryboardImageBatchGenerate() {
       if (!ctx) return
 
       const gen = ++resumeFollowGeneration
-
+      beginFlowTaskListQuietWindow(ctx.projectId)
+      try {
       const storyboardIds = currentPanels
         .map((p) => parseServerStoryboardId(p.id))
         .filter((id): id is number => id != null)
@@ -2051,6 +2054,9 @@ export function useStoryboardImageBatchGenerate() {
       if (persistedGenerating.length) {
         applyImmediatePanelLoadingRestore(currentPanels, { skipScopeHydrate: batchRunInFlight })
         return
+      }
+      } finally {
+        endFlowTaskListQuietWindow(ctx.projectId)
       }
     }
 

@@ -52,11 +52,15 @@
               <button type="button" class="extract-col__card" @click.stop="openPicker(col.kind)">
                 <figure class="extract-col__figure">
                   <div class="extract-col__img-wrap">
-                    <img
+                    <ShimmerImage
                       v-if="localAgents[col.kind].thumbnail"
                       :src="localAgents[col.kind].thumbnail"
                       :alt="localAgents[col.kind].name || col.label + '智能体'"
-                      class="extract-col__img"
+                      img-class="extract-col__img"
+                      wrapper-class="extract-col__img-shimmer"
+                      object-fit="cover"
+                      reveal-direction="fade"
+                      :min-shimmer-ms="280"
                     />
                     <div v-else class="extract-col__img-placeholder">
                       <ThunderboltOutlined />
@@ -138,6 +142,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { ThunderboltOutlined } from '@ant-design/icons-vue'
 import ModalTitleWatermark from '~/components/ModalTitleWatermark.vue'
+import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import AgentPickerModal, { type AgentOption } from './AgentPickerModal.vue'
 import { useCreationStore } from '~/stores/creation'
 import type { UserModelListItem } from '~/types/business-api'
@@ -329,7 +334,12 @@ function applyGenConfigForKind(
       const matched = agents.find((a) => a.id === agentCode)
       localAgents[kind] = matched
         ? { ...matched }
-        : { id: agentCode, name: agentCode, thumbnail: '', desc: '' }
+        : {
+            id: agentCode,
+            name: agentCode,
+            thumbnail: String(cfg?.agentIconUrl || '').trim(),
+            desc: ''
+          }
     } else {
       const first = pickFirstAgentOption(agents)
       if (first) {
@@ -733,6 +743,16 @@ const handleCancel = () => {
   overflow: hidden;
   background: rgba(10, 14, 22, 0.9);
   border: 1px solid rgba(74, 231, 253, 0.28);
+}
+
+.extract-col__img-shimmer {
+  width: 100%;
+  height: 100%;
+}
+
+.extract-col__img-wrap :deep(.extract-col__img-shimmer) {
+  width: 100%;
+  height: 100%;
 }
 
 .extract-col__img {

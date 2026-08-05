@@ -150,6 +150,7 @@ import {
   DEFAULT_NINE_GRID_ANGLE_PROMPTS,
   NINE_GRID_SPHERE_CAMERA_POSITIONS
 } from '~/utils/nineGridCameraAngles'
+import { createTrackedObjectUrl, revokeObjectUrl } from '~/utils/objectUrl'
 
 interface Props {
   open: boolean
@@ -633,8 +634,8 @@ const handleUploadImage = () => {
     const target = event.target as HTMLInputElement
     const file = target.files?.[0]
     if (!file) return
-    if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke)
-    objectUrlToRevoke = URL.createObjectURL(file)
+    if (objectUrlToRevoke) revokeObjectUrl(objectUrlToRevoke)
+    objectUrlToRevoke = createTrackedObjectUrl(file)
     activeImageUrl.value = objectUrlToRevoke
   }
   input.click()
@@ -751,7 +752,7 @@ watch([horizontalRotation, verticalAngle, focalLength], () => {
 
 onBeforeUnmount(() => {
   destroyThreeScene()
-  if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke)
+  if (objectUrlToRevoke) revokeObjectUrl(objectUrlToRevoke)
 })
 </script>
 

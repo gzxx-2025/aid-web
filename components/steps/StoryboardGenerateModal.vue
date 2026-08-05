@@ -62,11 +62,15 @@
                 >
                   <figure class="extract-col__figure">
                     <div class="extract-col__img-wrap">
-                      <img
+                      <ShimmerImage
                         v-if="currentAgent.thumbnail"
                         :src="currentAgent.thumbnail"
                         :alt="currentAgent.name || '智能体'"
-                        class="extract-col__img"
+                        img-class="extract-col__img"
+                        wrapper-class="extract-col__img-shimmer"
+                        object-fit="cover"
+                        reveal-direction="fade"
+                        :min-shimmer-ms="280"
                       />
                       <div v-else-if="source === 'script' && scriptAgentsLoading" class="extract-col__img-placeholder">
                         <LoadingOutlined spin />
@@ -235,6 +239,7 @@ import { ref, computed, watch, h, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { LoadingOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
 import ModalTitleWatermark from '~/components/ModalTitleWatermark.vue'
+import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import AgentPickerModal, { type AgentOption } from '~/components/steps/AgentPickerModal.vue'
 import { useCreationStore } from '~/stores/creation'
 import { aidAgentList } from '~/utils/businessApi'
@@ -970,6 +975,16 @@ function handleConfirm() {
   overflow: hidden;
   background: rgba(10, 14, 22, 0.9);
   border: 1px solid rgba(74, 231, 253, 0.28);
+}
+
+.story-gen-figma .extract-col__img-shimmer {
+  width: 100%;
+  height: 100%;
+}
+
+.story-gen-figma .extract-col__img-wrap :deep(.extract-col__img-shimmer) {
+  width: 100%;
+  height: 100%;
 }
 
 .story-gen-figma .extract-col__img {

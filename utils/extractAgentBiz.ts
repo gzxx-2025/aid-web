@@ -165,22 +165,18 @@ export const FORM_GENERATE_AGENT_BIZ_TYPE = FORM_GENERATE_AGENT_BIZ_CATEGORY
 /** @deprecated 使用 FORM_IMAGE_AGENT_BIZ_CATEGORY */
 export const FORM_IMAGE_AGENT_BIZ_TYPE = FORM_IMAGE_AGENT_BIZ_CATEGORY
 
-/** 与历史 mock 一致：按 agentCode 生成稳定随机头像 */
-export function randomAgentThumbnail(agentCode: string, index = 0): string {
-  const seed = encodeURIComponent(`${agentCode || 'agent'}-${index}`)
-  return `https://picsum.photos/seed/${seed}/80/80`
-}
-
-export function agentInfoToOption(row: AgentInfoVO, index = 0): AgentOption {
+export function agentInfoToOption(row: AgentInfoVO): AgentOption {
   const code = String(row.agentCode || '').trim()
   const bizCategoryCode = String(row.bizCategoryCode || '').trim()
   const intro = String(row.introduction || row.subTitle || '').trim()
   const defaultModelCode = String(row.modelCode || '').trim()
+  // agent/list → iconUrl；gen-config agentOptions → agentIconUrl
+  const thumbnail = String(row.iconUrl || row.agentIconUrl || '').trim()
   return {
     id: code,
     name: String(row.name || code || '未命名智能体'),
     desc: intro,
-    thumbnail: code ? randomAgentThumbnail(code, index) : '',
+    thumbnail,
     ...(bizCategoryCode ? { bizCategoryCode } : {}),
     ...(defaultModelCode ? { defaultModelCode } : {})
   }
@@ -208,16 +204,25 @@ export function agentOptionsFromGroup(
   bizCategoryCode: string
 ): AgentOption[] {
   return agentsInGroup(groups, bizCategoryCode)
-    .map((r, i) => agentInfoToOption(r, i))
+    .map((r) => agentInfoToOption(r))
     .filter((a) => a.id)
 }
 
 /** 从 gen-config/get 单场景的 agentOptions 转为前端 AgentOption 列表 */
 export function agentOptionsFromGenConfigVo(
-  vo: Pick<ProjectGenConfigVO, 'agentOptions'>
+  vo: Pick<ProjectGenConfigVO, 'agentOptions' | 'agentCode' | 'agentIconUrl'>
 ): AgentOption[] {
+  const sceneIcon = String(vo.agentIconUrl || '').trim()
+  const sceneAgentCode = String(vo.agentCode || '').trim()
   return (vo.agentOptions ?? [])
-    .map((r, i) => agentInfoToOption(r, i))
+    .map((r) => {
+      const opt = agentInfoToOption(r)
+      // 场景级 agentIconUrl：回填到当前已选智能体（options 单项可能未带图标）
+      if (!opt.thumbnail && sceneIcon && opt.id === sceneAgentCode) {
+        opt.thumbnail = sceneIcon
+      }
+      return opt
+    })
     .filter((a) => a.id)
 }
 

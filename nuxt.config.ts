@@ -146,7 +146,12 @@ export default defineNuxtConfig({
       }
     }
   },
-  // 生产构建合并 CSS，减少首屏多个 link 竞态导致的 FOUC
+  /**
+   * 注意：Nuxt 3.21 / Vite 7 下不可再设 `build.cssCodeSplit: false`。
+   * 该选项会把样式打进 `_nuxt/style.*.css`，但入口 HTML/JS 不引用该文件，
+   * 导致 CreateFlowShell 等 SFC scoped 样式在 `nuxt generate` 后整页丢失
+   *（本地 dev 正常，流程页刷新也不恢复）。恢复默认按 chunk 拆分并由 JS 导入。
+   */
   vite: {
     esbuild: {
       drop: isProd ? ['debugger'] : [],
@@ -159,9 +164,6 @@ export default defineNuxtConfig({
         ignored: ['**/dist/**', '**/dist.zip']
       }
     },
-    build: {
-      cssCodeSplit: false
-    },
     css: {
       preprocessorOptions: {
         css: {}
@@ -171,8 +173,8 @@ export default defineNuxtConfig({
       include: ['ant-design-vue']
     }
   },
-  // 将当前页相关样式内联进 HTML，首屏即有布局样式（Nuxt 3.10+）
-  experimental: {
-    inlineSSRStyles: true
+  // 将当前页相关样式内联进 HTML，首屏即有布局样式（Nuxt 3.13+ 用 features.inlineStyles）
+  features: {
+    inlineStyles: true
   }
 })

@@ -91,11 +91,15 @@
                     >
                       <div class="pgc-agent-model-card__agent">
                         <div class="pgc-agent-model-card__avatar">
-                          <img
+                          <ShimmerImage
                             v-if="agentThumbnail(scene.sceneCode)"
                             :src="agentThumbnail(scene.sceneCode)"
                             :alt="agentDisplayName(scene.sceneCode)"
-                            class="pgc-agent-model-card__avatar-img"
+                            img-class="pgc-agent-model-card__avatar-img"
+                            wrapper-class="pgc-agent-model-card__avatar-shimmer"
+                            object-fit="cover"
+                            reveal-direction="fade"
+                            :min-shimmer-ms="280"
                           />
                           <AppstoreOutlined v-else class="pgc-agent-model-card__avatar-ico" />
                         </div>
@@ -198,6 +202,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { AppstoreOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 import ModalTitleWatermark from '~/components/ModalTitleWatermark.vue'
+import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import AgentPickerModal, { type AgentOption } from '~/components/steps/AgentPickerModal.vue'
 import type { ProjectGenConfigVO, UserModelListItem } from '~/types/business-api'
 import { resolveUserModelProviderLogo } from '~/utils/userModelOption'
@@ -215,6 +220,7 @@ import {
 interface SceneRowDraft {
   agentCode: string
   agentName: string
+  agentIconUrl: string
   modelCode: string
   resolution: string
   aspectRatio: string
@@ -287,6 +293,7 @@ function emptyRow(): SceneRowDraft {
   return {
     agentCode: '',
     agentName: '',
+    agentIconUrl: '',
     modelCode: '',
     resolution: '',
     aspectRatio: '',
@@ -326,7 +333,9 @@ function agentDisplayDesc(sceneCode: string): string {
 }
 
 function agentThumbnail(sceneCode: string): string {
-  return String(selectedAgent(sceneCode)?.thumbnail || '').trim()
+  return String(
+    selectedAgent(sceneCode)?.thumbnail || rowValue(sceneCode).agentIconUrl || ''
+  ).trim()
 }
 
 function modelDisplayName(sceneCode: string): string {
@@ -383,6 +392,7 @@ function applyVoToRow(vo: ProjectGenConfigVO) {
   rows[code] = {
     agentCode,
     agentName: agentHit?.name || agentCode,
+    agentIconUrl: String(agentHit?.thumbnail || vo.agentIconUrl || '').trim(),
     modelCode: String(vo.modelCode || '').trim(),
     resolution: String(vo.resolution || '').trim(),
     aspectRatio: String(vo.aspectRatio || '').trim(),
@@ -437,22 +447,26 @@ async function seedSceneRowDefaults(sceneCode: string, kind: ProjectGenConfigSce
 
   let agentCode = String(cur.agentCode || '').trim()
   let agentName = String(cur.agentName || '').trim()
+  let agentIconUrl = String(cur.agentIconUrl || '').trim()
 
   if (!agentCode) {
     const first = pickFirstAgentOption(agents)
     if (first) {
       agentCode = first.id
       agentName = first.name
+      agentIconUrl = String(first.thumbnail || '').trim()
     }
   } else {
     const hit = agents.find((a) => a.id === agentCode)
     if (hit) {
       agentName = hit.name
+      agentIconUrl = String(hit.thumbnail || agentIconUrl || '').trim()
     } else {
       const first = pickFirstAgentOption(agents)
       if (first) {
         agentCode = first.id
         agentName = first.name
+        agentIconUrl = String(first.thumbnail || '').trim()
       } else if (!agentName) {
         agentName = agentCode
       }
@@ -482,6 +496,7 @@ async function seedSceneRowDefaults(sceneCode: string, kind: ProjectGenConfigSce
     {
       agentCode,
       agentName,
+      agentIconUrl,
       modelCode,
       resolution: cur.resolution,
       aspectRatio: cur.aspectRatio,
@@ -571,6 +586,7 @@ function onAgentPicked(payload: { agent?: AgentOption; modelCode?: string }) {
   if (agent) {
     cur.agentCode = agent.id
     cur.agentName = agent.name
+    cur.agentIconUrl = String(agent.thumbnail || '').trim()
   }
   const pickedModel = String(payload.modelCode || agent?.defaultModelCode || '').trim()
   if (pickedModel) {
@@ -955,6 +971,16 @@ watch(
   font-size: 16px;
   font-weight: 700;
   line-height: 1;
+}
+
+.pgc-agent-model-card__avatar-shimmer {
+  width: 100%;
+  height: 100%;
+}
+
+.pgc-agent-model-card__avatar :deep(.pgc-agent-model-card__avatar-shimmer) {
+  width: 100%;
+  height: 100%;
 }
 
 .pgc-agent-model-card__avatar-img {

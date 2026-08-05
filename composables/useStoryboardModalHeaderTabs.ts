@@ -24,6 +24,11 @@ export function useStoryboardModalHeaderTabs(options: {
   creationStore: CreationStore
   route: RouteLocationNormalizedLoaded
   headerOptions?: HeaderTabOptions | (() => HeaderTabOptions | undefined)
+  /**
+   * 打开时是否自动 force 拉 list-by-storyboard。
+   * 编辑分镜图/视频弹窗应设为 false：由 syncSceneDetailAndRestore 统一拉一次，再喂给顶部 Tab + 画布，避免双打。
+   */
+  autoRefreshOnOpen?: boolean
 }): {
   headerTabs: Ref<StoryboardModalHeaderTab[]>
   headerLoading: Ref<boolean>
@@ -33,6 +38,7 @@ export function useStoryboardModalHeaderTabs(options: {
   const headerTabs = ref<StoryboardModalHeaderTab[]>([])
   const headerLoading = ref(false)
   const projectRecordRows = ref<StoryboardRecordRow[]>([])
+  const autoRefreshOnOpen = options.autoRefreshOnOpen !== false
   let loadGen = 0
 
   async function refreshHeaderTabs(force?: boolean) {
@@ -71,7 +77,7 @@ export function useStoryboardModalHeaderTabs(options: {
     () => options.open(),
     (open) => {
       if (open) {
-        void refreshHeaderTabs(true)
+        if (autoRefreshOnOpen) void refreshHeaderTabs(true)
       } else {
         loadGen += 1
         headerTabs.value = []

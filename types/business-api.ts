@@ -2674,6 +2674,10 @@ export interface AgentInfoVO {
   name?: string
   subTitle?: string
   introduction?: string
+  /** 智能体图标：POST /aid/agent/list */
+  iconUrl?: string | null
+  /** 智能体图标：gen-config/get 的 agentOptions / 场景级字段 */
+  agentIconUrl?: string | null
   modelCode?: string | null
   temperature?: number | null
   topP?: number | null
@@ -2712,6 +2716,8 @@ export type ProjectGenConfigSource = 'project' | 'default' | 'none'
 export interface ProjectGenConfigVO {
   sceneCode: ProjectGenConfigSceneCode | string
   agentCode?: string | null
+  /** 当前已选智能体图标（场景级；agentOptions 单项也可能带同名字段） */
+  agentIconUrl?: string | null
   modelCode?: string | null
   resolution?: string | null
   aspectRatio?: string | null

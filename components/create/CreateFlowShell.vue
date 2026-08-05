@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="create-page" :class="{ 'create-page--series-upload': isSeriesFlowChrome }">
     <!-- 主内容区：左右布局 -->
     <!-- 页面就绪前的骨架屏，避免步骤从第 1 步闪到持久化步骤 -->
@@ -493,14 +493,9 @@ import {
   shouldConfirmReplacePublishedVideo
 } from '~/utils/projectAudit'
 import { LeftOutlined, LoadingOutlined } from '@ant-design/icons-vue'
+import { defineAsyncComponent } from 'vue'
 import HomeSidebar from '~/components/layout/HomeSidebar.vue'
-import PublishCasePlazaModal from '~/components/common/PublishCasePlazaModal.vue'
 import type { CreationStep } from '~/types'
-import ExtractAgentModal from '~/components/steps/ExtractAgentModal.vue'
-import CreateFirstStepModal from '~/components/steps/CreateFirstStepModal.vue'
-import ProjectGenConfigModal from '~/components/steps/ProjectGenConfigModal.vue'
-import GlobalGenerateTaskPopover from '~/components/steps/GlobalGenerateTaskPopover.vue'
-import RechargeModal from '~/components/common/RechargeModal.vue'
 import UserMenuDropdown from '~/components/common/UserMenuDropdown.vue'
 import {
   routePathToCreationStep,
@@ -513,7 +508,7 @@ import {
 import { getCreateFlowDisplaySteps } from '~/utils/createFlowStepMeta'
 import { shouldSkipFlowProjectScopedApis } from '~/utils/createFlowProjectContext'
 import {
-  fetchFlowUserTaskListOnce,
+  fetchFlowUserTaskList,
   invalidateFlowUserTaskListCache
 } from '~/utils/userTaskListFlowOnce'
 import { dispatchCreateFlowTaskCommand } from '~/utils/createFlowTaskCommand'
@@ -562,6 +557,22 @@ import {
 import { isStep3FlowStepGenerating } from '~/utils/step3LiveGenRestore'
 import type { UserTaskRow } from '~/types/business-api'
 
+const PublishCasePlazaModal = defineAsyncComponent(
+  () => import('~/components/common/PublishCasePlazaModal.vue')
+)
+const ExtractAgentModal = defineAsyncComponent(
+  () => import('~/components/steps/ExtractAgentModal.vue')
+)
+const CreateFirstStepModal = defineAsyncComponent(
+  () => import('~/components/steps/CreateFirstStepModal.vue')
+)
+const ProjectGenConfigModal = defineAsyncComponent(
+  () => import('~/components/steps/ProjectGenConfigModal.vue')
+)
+const GlobalGenerateTaskPopover = defineAsyncComponent(
+  () => import('~/components/steps/GlobalGenerateTaskPopover.vue')
+)
+const RechargeModal = defineAsyncComponent(() => import('~/components/common/RechargeModal.vue'))
 const route = useRoute()
 const router = useRouter()
 const isSeriesScriptUpload = computed(() => isSeriesScriptUploadPath(route.path))
@@ -867,7 +878,7 @@ const activeProjectId = computed(() => {
   return null
 })
 
-/** 进入创作流程时预拉一次 task/list，切换步骤与各弹窗恢复均复用缓存 */
+/** 进入创作流程时 bootstrap 权威 task/list，切换步骤与各弹窗恢复均复用缓存 */
 watch(
   activeProjectId,
   (pid, prevPid) => {
@@ -877,7 +888,7 @@ watch(
       if (prevPid) invalidateFlowUserTaskListCache(prevPid)
       return
     }
-    void fetchFlowUserTaskListOnce(pid)
+    void fetchFlowUserTaskList(pid, { intent: 'bootstrap' })
   },
   { immediate: true }
 )

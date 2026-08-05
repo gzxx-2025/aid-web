@@ -316,7 +316,7 @@ import { normalizeInviteCode, withLoginInviteCode } from '~/utils/authLoginInvit
 import { clearPendingCaptchaToken, setPendingCaptchaToken } from '~/utils/captchaToken'
 import { mapLoginDataToUser } from '~/utils/userProfile'
 import fallbackLogoUrl from '~/assets/img/home/logo.svg'
-import loginVideoBgUrl from '~/assets/img/login/login-video-bg.mp4'
+const loginVideoBgUrl = '/media/login/login-video-bg.mp4'
 import numberIconUrl from '~/assets/img/login/number.svg'
 import veriIconUrl from '~/assets/img/login/veri.svg'
 import peopleIconUrl from '~/assets/img/login/pepole.svg'

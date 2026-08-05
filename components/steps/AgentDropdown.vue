@@ -7,11 +7,15 @@
       @click="$emit('toggle')"
     >
       <div class="agent-preview">
-        <img
+        <ShimmerImage
           v-if="value.thumbnail"
           :src="value.thumbnail"
           :alt="value.name"
-          class="agent-thumbnail"
+          img-class="agent-thumbnail__img"
+          wrapper-class="agent-thumbnail"
+          object-fit="cover"
+          reveal-direction="fade"
+          :min-shimmer-ms="280"
         />
         <div v-else class="agent-thumbnail placeholder">
           {{ value.name?.slice(0, 1) || '?' }}
@@ -35,11 +39,15 @@
           :class="{ selected: value.id === option.id }"
           @click="$emit('select', option)"
         >
-          <img
+          <ShimmerImage
             v-if="option.thumbnail"
             :src="option.thumbnail"
             :alt="option.name"
-            class="option-thumbnail"
+            img-class="option-thumbnail__img"
+            wrapper-class="option-thumbnail"
+            object-fit="cover"
+            reveal-direction="fade"
+            :min-shimmer-ms="280"
           />
           <div v-else class="option-thumbnail placeholder">
             {{ option.name?.slice(0, 1) || '?' }}
@@ -68,6 +76,7 @@
 
 <script setup lang="ts">
 import { DownOutlined, UpOutlined, CheckCircleFilled, MoreOutlined, RightOutlined } from '@ant-design/icons-vue'
+import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import type { AgentOption } from './AgentPickerModal.vue'
 
 interface Props {
@@ -130,6 +139,13 @@ defineEmits<{
   object-fit: cover;
   flex-shrink: 0;
   background: rgba(6, 10, 18, 0.55);
+  overflow: hidden;
+}
+
+.agent-preview :deep(.agent-thumbnail__img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .agent-thumbnail.placeholder {
@@ -219,6 +235,13 @@ defineEmits<{
   object-fit: cover;
   flex-shrink: 0;
   background: rgba(6, 10, 18, 0.55);
+  overflow: hidden;
+}
+
+.option-item :deep(.option-thumbnail__img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .option-thumbnail.placeholder {

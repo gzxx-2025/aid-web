@@ -3433,11 +3433,7 @@ export const useCreationStore = defineStore('creation', {
       'extractAgents',
       'optionalModelCodesByScope',
       'storyboardVideoSettingsByScope',
-      'sceneImages',
-      'characterImages',
-      'propImages',
-      'characterFormImages',
-      'propFormImages',
+      // 大图 URL 列表由项目详情 / 步骤 hydrate 从服务端恢复，不再进 localStorage，降低堆与配额压力
       'manualScenes',
       'manualSceneAssetIds',
       'manualCharacters',
@@ -3446,6 +3442,7 @@ export const useCreationStore = defineStore('creation', {
       'characterForms',
       'propForms',
       'step3GenVisualByScope',
+      // 刷新恢复生成中态仍依赖本地快照（服务端任务列表会二次对齐）
       'step4PlusLiveGenByScope',
       // 与 scoped 同步写入，兼容旧版仅扁平持久化的数据（afterRestore 会迁入 scoped）
       'sceneGenerationStatus',

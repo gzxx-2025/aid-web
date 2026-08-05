@@ -164,7 +164,7 @@ import {
 } from '~/utils/businessApi'
 import {
   FLOW_USER_TASK_LIST_READY_EVENT,
-  fetchFlowUserTaskListOnce,
+  fetchFlowUserTaskList,
   getCachedFlowUserTaskList,
   scheduleFlowUserTaskListRefresh,
   type FlowUserTaskListReadyDetail
@@ -463,8 +463,8 @@ async function loadTasksPage(reset = false, options?: { allowFillScroll?: boolea
     let pageRows: UserTaskRow[]
     let pageHasMore: boolean
     if (reset) {
-      pageRows = await fetchFlowUserTaskListOnce(props.projectId, {
-        force: options?.forceNetwork === true
+      pageRows = await fetchFlowUserTaskList(props.projectId, {
+        intent: options?.forceNetwork === true ? 'mutate' : 'read'
       })
       pageHasMore = pageRows.length >= USER_TASK_LIST_RESTORE_PAGE_SIZE
     } else {

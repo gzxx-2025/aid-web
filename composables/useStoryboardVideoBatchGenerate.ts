@@ -23,7 +23,9 @@ import {
   userTaskDetailCached
 } from '~/utils/businessApi'
 import {
-  fetchFlowUserTaskListOnce,
+  beginFlowTaskListQuietWindow,
+  endFlowTaskListQuietWindow,
+  fetchFlowUserTaskList,
   filterUserTaskRowsForEpisode
 } from '~/utils/userTaskListFlowOnce'
 import {
@@ -786,8 +788,13 @@ export function useStoryboardVideoBatchGenerate() {
         creationStore.currentEpisodeId
       )
     }
-    // restore 必须 force：避免流程内旧 list 缓存不含「刚提交的出片任务」
-    const rows = await fetchFlowUserTaskListOnce(pid, { force })
+    /**
+     * restore/发现默认 read：复用壳层 bootstrap 权威 list。
+     * force 仅用于提交后写穿（mutate），避免「刚提交的出片任务」被旧缓存挡住。
+     */
+    const rows = await fetchFlowUserTaskList(pid, {
+      intent: force ? 'mutate' : 'read'
+    })
     cachedProjectTaskList = { projectId: pid, at: now, rows }
     /** 剧集隔离：禁止把其它集的分镜视频任务恢复到本集 */
     return filterUserTaskRowsForEpisode(rows, creationStore.currentEpisodeId)
@@ -2780,6 +2787,7 @@ export function useStoryboardVideoBatchGenerate() {
 
     const run = async () => {
       batchRunInFlight = true
+      let quietProjectId: number | null = null
       try {
         // 再次灌回：await 期间可能被 list sync / setCurrentProjectContext 冲掉扁平态
         applyCreationStoreScopeLiveGenFromRoute(creationStore, route)
@@ -2802,9 +2810,11 @@ export function useStoryboardVideoBatchGenerate() {
 
         let tasks: UserTaskRow[] = []
         let taskListOk = true
+        quietProjectId = ctx.projectId
+        beginFlowTaskListQuietWindow(ctx.projectId)
         try {
-          // 刷新续跟：强制最新 list（与任务中心同源），禁止旧缓存/失败卡片早退挡住出片 SSE
-          tasks = await fetchProjectTaskListCached(ctx.projectId, { force: true })
+          // 刷新续跟：read 复用权威 list；SSE 续跟不依赖再 force 打网
+          tasks = await fetchProjectTaskListCached(ctx.projectId)
         } catch {
           tasks = []
           taskListOk = false
@@ -3429,6 +3439,7 @@ export function useStoryboardVideoBatchGenerate() {
         // 只剩弹窗持久化任务时，外层不续跟、不改卡片状态；打开弹窗后由其恢复。
         return
       } finally {
+        if (quietProjectId != null) endFlowTaskListQuietWindow(quietProjectId)
         batchRunInFlight = false
         followIdleBarrier.notifyStateChange()
       }

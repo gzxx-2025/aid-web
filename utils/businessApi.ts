@@ -12,6 +12,8 @@ import { isInsufficientBalanceMessage } from '~/utils/insufficientBalanceRecharg
 import { isMergedAssetOfficial } from '~/utils/mergedAssetSource'
 import { chunkRpsDeleteIds, mergeRpsDeleteBatchResults } from '~/utils/rpsDeleteBatch'
 import { normalizeUpdateMainRequest } from '~/utils/rpsUpdateMainPayload'
+import { normalizeListByFuncGroups } from '~/utils/modelListByFuncBatch'
+import { createTrackedObjectUrl, revokeObjectUrl } from '~/utils/objectUrl'
 import type {
   ApiEnvelope,
   ApiListEnvelope,
@@ -2247,7 +2249,7 @@ function parseContentDispositionFilename(raw: string | null): string {
 /** 触发浏览器保存 blob 文件 */
 export function triggerBrowserBlobDownload(blob: Blob, filename: string) {
   if (typeof document === 'undefined') return
-  const href = URL.createObjectURL(blob)
+  const href = createTrackedObjectUrl(blob)
   const a = document.createElement('a')
   a.href = href
   a.download = filename || 'download.zip'
@@ -2258,7 +2260,7 @@ export function triggerBrowserBlobDownload(blob: Blob, filename: string) {
   window.setTimeout(() => {
     try {
       a.remove()
-      URL.revokeObjectURL(href)
+      revokeObjectUrl(href)
     } catch {
       /* ignore */
     }
@@ -2310,44 +2312,6 @@ export async function userModelList(body: UserModelListRequest = {}): Promise<Us
   const res = await request.post<ApiEnvelope<UserModelListItem[]>>('/api/user/model/list', body)
   const data = unwrap(res)
   return Array.isArray(data) ? data : []
-}
-
-function emptyListByFuncGroup(funcCode: string): UserModelListByFuncGroupVO {
-  return { funcCode, models: [] }
-}
-
-/** 将 listByFunc 出参归一化为与入参 funcCodes 顺序一致的分组列表 */
-function normalizeListByFuncGroups(
-  data: unknown,
-  requestedCodes: readonly string[]
-): UserModelListByFuncGroupVO[] {
-  if (!requestedCodes.length) return []
-
-  if (!Array.isArray(data) || data.length === 0) {
-    return requestedCodes.map(emptyListByFuncGroup)
-  }
-
-  const first = data[0]
-  if (first && typeof first === 'object' && ('funcCode' in first || 'models' in first)) {
-    const byCode = new Map<string, UserModelListByFuncGroupVO>()
-    for (const raw of data as UserModelListByFuncGroupVO[]) {
-      const code = String(raw?.funcCode || '').trim()
-      if (!code) continue
-      byCode.set(code, {
-        ...raw,
-        funcCode: code,
-        models: Array.isArray(raw.models) ? raw.models : []
-      })
-    }
-    return requestedCodes.map((code) => byCode.get(code) ?? emptyListByFuncGroup(code))
-  }
-
-  // 兼容旧版：单 funcCode 请求时 data 为扁平模型数组
-  if (requestedCodes.length === 1) {
-    return [{ funcCode: requestedCodes[0], models: data as UserModelListItem[] }]
-  }
-
-  return requestedCodes.map(emptyListByFuncGroup)
 }
 
 /** 按多个功能编码批量查询模型列表：POST /api/user/model/listByFunc */

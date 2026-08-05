@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="rootRef"
     class="shimmer-image shimmer-video"
     :class="[
       wrapperClass,
@@ -11,14 +12,14 @@
   >
     <div class="shimmer-image__reveal" @animationend="onRevealAnimationEnd">
       <video
-        v-if="resolvedSrc && !hasError"
+        v-if="shouldMountVideo && !hasError"
         ref="videoRef"
-        :src="resolvedSrc"
+        :src="activeSrc"
         :class="['shimmer-image__img', videoClass]"
         :style="videoStyle"
         :muted="muted"
         :playsinline="playsinline"
-        :preload="preload"
+        :preload="effectivePreload"
         @loadeddata="onVideoReady"
         @canplay="onVideoReady"
         @error="onError"
@@ -48,6 +49,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { acquireMediaLoadSlot } from '~/utils/mediaLoadGate'
 
 const props = withDefaults(
   defineProps<{
@@ -58,6 +60,13 @@ const props = withDefaults(
     muted?: boolean
     playsinline?: boolean
     preload?: 'auto' | 'metadata' | 'none'
+    /**
+     * 进入滚动容器可视区后再挂 src。
+     * 缩略图/列表务必开启；主预览可关闭。
+     */
+    lazy?: boolean
+    /** 限制同时加载路数（默认开启），避免弹窗一次打爆网络 */
+    gated?: boolean
     minShimmerMs?: number
     revealDirection?: 'vertical' | 'horizontal' | 'fade'
     revealMs?: number
@@ -71,6 +80,8 @@ const props = withDefaults(
     muted: true,
     playsinline: true,
     preload: 'metadata',
+    lazy: false,
+    gated: true,
     minShimmerMs: 0,
     revealDirection: 'fade',
     revealMs: 780,
@@ -86,17 +97,27 @@ const emit = defineEmits<{
   pause: [event: Event]
 }>()
 
+const rootRef = ref<HTMLElement | null>(null)
 const videoRef = ref<HTMLVideoElement | null>(null)
 const revealPhase = ref<'waiting' | 'revealing' | 'done'>('waiting')
 const hasError = ref(false)
 const mediaReady = ref(false)
 const loadStartedAt = ref(0)
+const inView = ref(!props.lazy)
+const slotReady = ref(!props.gated)
 let revealTimer: ReturnType<typeof setTimeout> | null = null
 let revealFallbackTimer: ReturnType<typeof setTimeout> | null = null
 let cacheSyncFallbackTimer: ReturnType<typeof setTimeout> | null = null
 let loadEmitted = false
+let intersectionObserver: IntersectionObserver | null = null
+let releaseSlot: (() => void) | null = null
+let slotToken = 0
 
 const resolvedSrc = computed(() => String(props.src || '').trim())
+const canBindSrc = computed(() => inView.value && slotReady.value)
+const shouldMountVideo = computed(() => !!resolvedSrc.value && canBindSrc.value)
+const activeSrc = computed(() => (shouldMountVideo.value ? resolvedSrc.value : ''))
+const effectivePreload = computed(() => (canBindSrc.value ? props.preload : 'none'))
 
 const revealStyle = computed(() => ({
   '--shimmer-reveal-ms': `${props.revealMs}ms`,
@@ -244,24 +265,123 @@ function resetLoadState() {
   loadStartedAt.value = Date.now()
 }
 
+function disconnectObserver() {
+  if (!intersectionObserver) return
+  intersectionObserver.disconnect()
+  intersectionObserver = null
+}
+
+function releaseMediaSlot() {
+  if (!releaseSlot) return
+  releaseSlot()
+  releaseSlot = null
+}
+
+function findScrollRoot(el: HTMLElement): Element | null {
+  let parent = el.parentElement
+  while (parent) {
+    const style = window.getComputedStyle(parent)
+    const ox = style.overflowX
+    const oy = style.overflowY
+    if (/(auto|scroll|overlay)/.test(ox) || /(auto|scroll|overlay)/.test(oy)) {
+      return parent
+    }
+    parent = parent.parentElement
+  }
+  return null
+}
+
+function markInView() {
+  if (inView.value) return
+  inView.value = true
+  disconnectObserver()
+}
+
+function setupLazyObserver() {
+  disconnectObserver()
+  if (!props.lazy || !import.meta.client) {
+    inView.value = true
+    return
+  }
+  const el = rootRef.value
+  if (!el) return
+  if (typeof IntersectionObserver === 'undefined') {
+    inView.value = true
+    return
+  }
+
+  const root = findScrollRoot(el)
+  intersectionObserver = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      markInView()
+    },
+    {
+      root,
+      // 只预热邻近一屏，避免头部横向 Tab 一次加载过多
+      rootMargin: root ? '40px 48px' : '80px 40px',
+      threshold: 0.15
+    }
+  )
+  intersectionObserver.observe(el)
+}
+
+async function ensureLoadSlot() {
+  const token = ++slotToken
+  releaseMediaSlot()
+  if (!props.gated) {
+    slotReady.value = true
+    return
+  }
+  slotReady.value = false
+  const release = await acquireMediaLoadSlot(2)
+  if (token !== slotToken) {
+    release()
+    return
+  }
+  releaseSlot = release
+  slotReady.value = true
+}
+
 watch(
-  resolvedSrc,
-  async (src) => {
+  () => props.lazy,
+  (lazy) => {
+    if (!lazy) {
+      inView.value = true
+      disconnectObserver()
+      return
+    }
+    inView.value = false
+    void nextTick(() => setupLazyObserver())
+  }
+)
+
+watch(
+  [resolvedSrc, inView],
+  async ([src, visible]) => {
     resetLoadState()
-    if (!src) return
+    if (!src || !visible) {
+      releaseMediaSlot()
+      slotReady.value = !props.gated
+      return
+    }
+    await ensureLoadSlot()
+    if (!slotReady.value || !resolvedSrc.value) return
     await syncLoadedFromCache()
   },
   { immediate: true }
 )
 
 onMounted(() => {
-  if (resolvedSrc.value) {
-    void syncLoadedFromCache()
-  }
+  if (props.lazy) setupLazyObserver()
+  else if (resolvedSrc.value) void ensureLoadSlot().then(() => syncLoadedFromCache())
 })
 
 onBeforeUnmount(() => {
+  slotToken += 1
   clearRevealTimers()
+  disconnectObserver()
+  releaseMediaSlot()
 })
 
 defineExpose({

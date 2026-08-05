@@ -11,7 +11,7 @@ import {
   userAssetExtractParallel,
   userAssetRpsList
 } from '~/utils/businessApi'
-import { fetchFlowUserTaskListOnce, filterUserTaskRowsForEpisode } from '~/utils/userTaskListFlowOnce'
+import { fetchFlowUserTaskList, filterUserTaskRowsForEpisode } from '~/utils/userTaskListFlowOnce'
 import { requestCancelUserTaskById } from '~/utils/userTaskCancelFlow'
 import { inferExtractAssetTabFromSse } from '~/utils/inferExtractAssetTabFromSse'
 import { resolveStepIndexTotalFromSse } from '~/utils/taskSseProgressText'
@@ -256,10 +256,13 @@ export function useCreateFlowExtractAgents() {
     try {
       const ctx = await resolveStoryScriptSaveContext(creationStore, route)
       if (!ctx) return false
-      /** 必须 force：步骤切走再切回时会话缓存可能仍是提取开始前的列表，误判「无进行中任务」导致弹窗误弹 */
+      /**
+       * 切步回来时用 mutate 写穿一次：避免提交后缓存仍是提取前列表，误判无进行中而弹窗。
+       * 此路径非 restore 风暴，且与 schedule 并发会合并。
+       */
       /** 剧集隔离：其它集的提取任务不影响本集弹窗判定 */
       const list = filterUserTaskRowsForEpisode(
-        await fetchFlowUserTaskListOnce(ctx.projectId, { force: true }),
+        await fetchFlowUserTaskList(ctx.projectId, { intent: 'mutate' }),
         ctx.episodeId
       )
       const st = (s: unknown) => String(s ?? '').trim().toUpperCase()
@@ -789,7 +792,7 @@ export function useCreateFlowExtractAgents() {
     try {
       /** 剧集隔离：兜底取消只找本集进行中的提取任务，防止误取消其它集任务 */
       const all = filterUserTaskRowsForEpisode(
-        await fetchFlowUserTaskListOnce(ctx.projectId),
+        await fetchFlowUserTaskList(ctx.projectId, { intent: 'read' }),
         ctx.episodeId
       )
       const st = (s: unknown) => String(s ?? '').trim().toUpperCase()

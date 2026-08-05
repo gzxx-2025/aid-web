@@ -1,5 +1,3 @@
-import { gsap } from 'gsap'
-
 /** 展示页（案例广场、作品库等）— 稍强、有电影感 */
 export const MOTION_SHOWCASE = {
   duration: 0.5,
@@ -17,7 +15,7 @@ export const MOTION_CREATE = {
   y: 0
 } as const
 
-export type MotionGsap = typeof gsap
+export type MotionGsap = typeof import('gsap').gsap
 
 type MotionTarget = string | Element | Element[] | NodeListOf<Element>
 

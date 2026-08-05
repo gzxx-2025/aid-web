@@ -49,11 +49,15 @@
                   @click.stop="pickAgent(opt)"
                 >
                   <div class="setting-card-thumb setting-card-thumb--agent" aria-hidden="true">
-                    <img
+                    <ShimmerImage
                       v-if="opt.thumbnail"
                       :src="opt.thumbnail"
                       :alt="opt.name"
-                      class="setting-card-thumb__img"
+                      img-class="setting-card-thumb__img"
+                      wrapper-class="setting-card-thumb__shimmer"
+                      object-fit="cover"
+                      reveal-direction="fade"
+                      :min-shimmer-ms="280"
                     />
                     <span v-else class="setting-card-thumb__letter">{{ (opt.name || '?').slice(0, 1) }}</span>
                   </div>
@@ -78,6 +82,7 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onUnmounted, computed } from 'vue'
+import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import type { AgentOption } from './AgentPickerModal.vue'
 import { aidAgentList } from '~/utils/businessApi'
 import { useCreationStore } from '~/stores/creation'
@@ -397,6 +402,16 @@ onUnmounted(() => {
 
 .setting-card-thumb--agent {
   background: linear-gradient(135deg, #2a3550 0%, #3d4a68 100%);
+}
+
+.setting-card-thumb__shimmer {
+  width: 100%;
+  height: 100%;
+}
+
+.setting-card-thumb :deep(.setting-card-thumb__shimmer) {
+  width: 100%;
+  height: 100%;
 }
 
 .setting-card-thumb__img {

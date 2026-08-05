@@ -132,7 +132,15 @@ export function resolveStoryboardVideoModelFuncCodes(creationMode?: string | nul
     codes.push(AI_MODEL_FUNC_CODE.STORYBOARD_VIDEO_IMAGE)
   }
   if (showStoryboardMultiParamVideoTab(creationMode)) {
-    codes.push(AI_MODEL_FUNC_CODE.STORYBOARD_VIDEO)
+    // 专业版优先 multi_pro；与批量生成弹窗、useModelList fallbacks 对齐
+    if (normalizeCreationMode(creationMode) === 'pro') {
+      codes.push(
+        AI_MODEL_FUNC_CODE.STORYBOARD_VIDEO_MULTI_PRO,
+        AI_MODEL_FUNC_CODE.STORYBOARD_VIDEO
+      )
+    } else {
+      codes.push(AI_MODEL_FUNC_CODE.STORYBOARD_VIDEO)
+    }
   }
   if (showStoryboardGridVideoTab(creationMode)) {
     codes.push(AI_MODEL_FUNC_CODE.STORYBOARD_VIDEO_GRID)

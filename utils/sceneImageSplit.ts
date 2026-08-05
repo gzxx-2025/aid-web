@@ -80,7 +80,8 @@ export function resolveCanvasImageElement(expectedUrl?: string): HTMLImageElemen
 }
 
 async function decodeBlobToImage(blob: Blob): Promise<HTMLImageElement> {
-  const objectUrl = URL.createObjectURL(blob)
+  const { createTrackedObjectUrl, revokeObjectUrl } = await import('~/utils/objectUrl')
+  const objectUrl = createTrackedObjectUrl(blob)
   try {
     const img = new Image()
     await new Promise<void>((resolve, reject) => {
@@ -93,7 +94,7 @@ async function decodeBlobToImage(blob: Blob): Promise<HTMLImageElement> {
     }
     return img
   } finally {
-    URL.revokeObjectURL(objectUrl)
+    revokeObjectUrl(objectUrl)
   }
 }
 

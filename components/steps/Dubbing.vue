@@ -188,6 +188,8 @@
                           wrapper-class="dubbing-video-shimmer"
                           object-fit="cover"
                           reveal-direction="fade"
+                          lazy
+                          preload="metadata"
                         />
                         <button
                           type="button"
@@ -323,6 +325,8 @@
                       wrapper-class="dubbing-video-shimmer"
                       object-fit="cover"
                       reveal-direction="fade"
+                      lazy
+                      preload="metadata"
                     />
                     <button
                       type="button"
@@ -423,7 +427,7 @@ import listSelIcon from '~/assets/img/icon/list-sel.svg'
 import cardNorIcon from '~/assets/img/icon/card-nor.svg'
 import cardSelIcon from '~/assets/img/icon/card-sel.svg'
 import emptyFjIcon from '~/assets/img/icon/empty-fj.svg'
-import generatingCenterIcon from '~/assets/img/icon/tmp00000001.png'
+import { GENERATING_CENTER_ICON_URL as generatingCenterIcon } from '~/utils/generatingCenterIcon'
 import {
   InfoCircleOutlined,
   MoreOutlined,

@@ -223,6 +223,8 @@
                     video-class="storyboard-video-preview"
                     object-fit="cover"
                     reveal-direction="fade"
+                    lazy
+                    preload="metadata"
                     @load="markPanelVideoMediaReady(index)"
                     @ended="onPanelVideoEnded(index)"
                     @pause="onPanelVideoPause(index)"
@@ -445,6 +447,8 @@
                             video-class="storyboard-video-preview"
                             object-fit="cover"
                             reveal-direction="fade"
+                            lazy
+                            preload="metadata"
                             @load="markPanelVideoMediaReady(index)"
                             @ended="onPanelVideoEnded(index)"
                             @pause="onPanelVideoPause(index)"
@@ -584,7 +588,7 @@ import iconReplace from '~/assets/img/icon/Replace.svg'
 import iconDownload from '~/assets/img/icon/download.svg'
 import iconEmptyFail from '~/assets/img/icon/empty_fail.svg'
 import emptyFjIcon from '~/assets/img/icon/empty-fj.svg'
-import generatingCenterIcon from '~/assets/img/icon/tmp00000001.png'
+import { GENERATING_CENTER_ICON_URL as generatingCenterIcon } from '~/utils/generatingCenterIcon'
 import ShimmerVideo from '~/components/common/ShimmerVideo.vue'
 import AssetCardCancelIcon from '~/components/common/AssetCardCancelIcon.vue'
 import {
