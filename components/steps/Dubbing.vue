@@ -43,7 +43,7 @@
       </div>
       <div class="storyboard-toolbar-right">
         <StoryboardToolbarOpsDropdown
-          v-if="!isSyncGeneratingStoryboard || dubOnboardingShowToolbar"
+          v-if="!isSyncGeneratingStoryboard"
           v-model:open="toolbarOpsOpen"
           :items="dubbingToolbarOpsItems"
           :loading="batchDeleteSubmitting || batchGeneratingIndicesArray.length > 0"
@@ -667,28 +667,11 @@ onUnmounted(() => {
   cancelEditStoryboardDubbingModalPreload?.()
   cancelEditStoryboardDubbingModalPreload = null
   dubbingBackgroundRestore.cancelPendingRestore()
-  if (import.meta.client) {
-    window.removeEventListener(
-      ONBOARDING_PREPARE_ANCHOR_EVENT,
-      handleOnboardingPrepareAnchor as EventListener
-    )
-  }
 })
 const batchRegenerateModalOpen = ref(false)
 const batchRegenerateModalTitle = ref('批量生成分镜配音')
 const batchRegeneratePreselectAll = ref(false)
 const toolbarOpsOpen = ref(false)
-
-function handleOnboardingPrepareAnchor(e: Event) {
-  const anchor = (e as CustomEvent<{ anchor?: string }>).detail?.anchor
-  if (anchor === 'dub-batch-dubbing') {
-    toolbarOpsOpen.value = true
-    return
-  }
-  if (anchor === 'dub-close-dropdown') {
-    toolbarOpsOpen.value = false
-  }
-}
 const batchDeleteSubmitting = ref(false)
 const isDubbingDragging = ref(false)
 /** 转为数组供编辑弹窗使用，用于弹窗内头部 tab 与右侧列表的 loading（按作品存在 Pinia） */
@@ -1279,12 +1262,6 @@ const removePanel = (idx: number) => {
 onMounted(() => {
   if (panels.value.length === 0 && creationStore.storyboardGenerationError) {
     creationStore.clearStoryboardScriptGenerationOutcome()
-  }
-  if (import.meta.client) {
-    window.addEventListener(
-      ONBOARDING_PREPARE_ANCHOR_EVENT,
-      handleOnboardingPrepareAnchor as EventListener
-    )
   }
 })
 </script>

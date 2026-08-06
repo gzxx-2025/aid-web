@@ -105,9 +105,16 @@ const mediaReady = ref(false)
 const loadStartedAt = ref(0)
 const inView = ref(!props.lazy)
 const slotReady = ref(!props.gated)
+/**
+ * 单路占用闸门过久则强制释放，仅用于解堵后续队列；
+ * 本卡若始终无 loadeddata/error，仍会保持 waiting shimmer（不误报 error）。
+ */
+const SLOT_HOLD_MAX_MS = 30_000
+
 let revealTimer: ReturnType<typeof setTimeout> | null = null
 let revealFallbackTimer: ReturnType<typeof setTimeout> | null = null
 let cacheSyncFallbackTimer: ReturnType<typeof setTimeout> | null = null
+let slotHoldTimer: ReturnType<typeof setTimeout> | null = null
 let loadEmitted = false
 let intersectionObserver: IntersectionObserver | null = null
 let releaseSlot: (() => void) | null = null
@@ -221,12 +228,15 @@ function onRevealAnimationEnd(event: AnimationEvent) {
 function onVideoReady() {
   if (mediaReady.value) return
   mediaReady.value = true
+  // 闸门只限制「同时发起」的请求数；就绪后必须释放，否则列表/弹窗后续视频永久卡 shimmer
+  releaseMediaSlot()
   tryReveal()
 }
 
 function onError() {
   hasError.value = true
   clearRevealTimers()
+  releaseMediaSlot()
   emit('error')
 }
 
@@ -234,6 +244,7 @@ function tryApplyCachedReady(): boolean {
   const el = videoRef.value
   if (!el || el.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return false
   mediaReady.value = true
+  releaseMediaSlot()
   tryReveal()
   return revealPhase.value !== 'waiting'
 }
@@ -271,7 +282,23 @@ function disconnectObserver() {
   intersectionObserver = null
 }
 
+function clearSlotHoldTimer() {
+  if (slotHoldTimer == null) return
+  clearTimeout(slotHoldTimer)
+  slotHoldTimer = null
+}
+
+function scheduleSlotHoldTimeout() {
+  clearSlotHoldTimer()
+  if (!props.gated) return
+  slotHoldTimer = setTimeout(() => {
+    slotHoldTimer = null
+    releaseMediaSlot()
+  }, SLOT_HOLD_MAX_MS)
+}
+
 function releaseMediaSlot() {
+  clearSlotHoldTimer()
   if (!releaseSlot) return
   releaseSlot()
   releaseSlot = null
@@ -341,6 +368,7 @@ async function ensureLoadSlot() {
   }
   releaseSlot = release
   slotReady.value = true
+  scheduleSlotHoldTimeout()
 }
 
 watch(
