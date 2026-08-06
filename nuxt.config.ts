@@ -144,9 +144,22 @@ export default defineNuxtConfig({
     }
   },
   nitro: {
+    /** Bundle lodash-es so Node ESM never receives extensionless subpath imports from UI dependencies. */
+    externals: {
+      inline: ['lodash-es']
+    },
     routeRules: {
-      // 创作流程为登录后客户端应用，关闭 SSR 避免 Pinia payload 序列化异常
-      '/create/**': { ssr: false },
+      // 登录后及依赖浏览器/API 的页面统一交给 SPA fallback，generate 不在 Node 中执行其 UI 错误处理。
+      '/works': { ssr: false, prerender: false },
+      '/assets': { ssr: false, prerender: false },
+      '/billing': { ssr: false, prerender: false },
+      '/invite': { ssr: false, prerender: false },
+      '/user': { ssr: false, prerender: false },
+      '/user/**': { ssr: false, prerender: false },
+      '/create': { ssr: false, prerender: false },
+      '/create/**': { ssr: false, prerender: false },
+      // 案例 ID 来自运行时接口，静态构建阶段无法完整枚举。
+      '/case/**': { ssr: false, prerender: false },
       // 开发: nuxt dev 加载 .env.development；生产构建: 加载 .env.production
       '/url/**': {
         proxy: `${proxyTarget.replace(/\/$/, '')}/**`
