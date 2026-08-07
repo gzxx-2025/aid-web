@@ -15,8 +15,11 @@ export type StoryboardVideoModalTabKey = 'imageToVideo' | 'multiParam' | 'gridVi
 export type CreationModeValue = GlobalSettingData['creationMode']
 export type ScriptTypeValue = GlobalSettingData['scriptType']
 
-/** 专业版模式下：分镜步骤无需分镜图，仅脚本 */
+/** 专业版 / 多参数：分镜步骤无需分镜图，仅脚本 */
 export const PRO_MODE_NO_STORYBOARD_IMAGE_TIP = '该模式下无须生成分镜图'
+
+/** 分镜设计不走生图流程的创作模式（与专业版 UI 规则同步） */
+const CREATION_MODES_SKIP_STORYBOARD_IMAGE = new Set<CreationModeValue>(['pro', 'multi'])
 
 /** 真人解说漫下不可用的创作模式 */
 const CREATION_MODES_DISABLED_FOR_MONOLOGUE = new Set<CreationModeValue>([
@@ -35,6 +38,11 @@ export function normalizeCreationMode(creationMode?: string | null): CreationMod
 
 export function isProCreationMode(creationMode?: string | null): boolean {
   return normalizeCreationMode(creationMode) === 'pro'
+}
+
+/** 专业版 / 多参数：分镜设计仅脚本，不生成/不校验分镜图 */
+export function skipsStoryboardImageGeneration(creationMode?: string | null): boolean {
+  return CREATION_MODES_SKIP_STORYBOARD_IMAGE.has(normalizeCreationMode(creationMode))
 }
 
 /** 剧本类型为真人解说漫时，禁用专业版 / 多参数 / 自动宫格 */

@@ -100,6 +100,7 @@ import {
 } from '~/utils/modalGenSessionScope'
 import { readStoryboardVideoModalGenSession } from '~/utils/storyboardVideoModalGenSession'
 import { createAsyncIdleBarrier } from '~/utils/asyncIdleBarrier'
+import { discoverOngoingStoryboardGenerationTasks } from '~/utils/storyboardGenerationTaskDiscovery'
 
 function bizErr(e: unknown): string {
   const x = e as { msg?: string; message?: string }
@@ -2053,6 +2054,7 @@ export function useStoryboardVideoBatchGenerate() {
       const body = buildImageVideoGenerateBody(storyboardIds)
       let result = await runStoryboardImageVideoGenerateTask({
         body,
+        notifyGlobalTasks: false,
         onSubmitted: ({ taskId }) => {
           syncActiveVideoTaskIdToStore(taskId)
         },
@@ -2741,6 +2743,97 @@ export function useStoryboardVideoBatchGenerate() {
     )
   }
 
+  /**
+   * Rebuild task ownership from authoritative task snapshots.
+   * The task list intentionally omits inputSnapshot, so every ongoing generation task must be
+   * inspected before the outer batch owner decides which single SSE it should follow.
+   */
+  async function reconcileOngoingVideoGenerationTasks(
+    tasks: UserTaskRow[],
+    pairs: StoryboardVideoPair[],
+    scopeAtEntry: ReturnType<typeof captureCreationLiveGenScope>
+  ): Promise<void> {
+    const currentStoryboardIds = new Set(pairs.map((pair) => pair.storyboardId))
+    if (!currentStoryboardIds.size) return
+
+    const knownModalTaskIds = new Set(
+      getPendingModalVideoTaskEntries().map((entry) => Number(entry[1].taskId))
+    )
+    for (const task of tasks) {
+      const taskId = Number(task?.id)
+      if (Number.isFinite(taskId) && taskId > 0 && isPersistedModalVideoGenerateTaskId(taskId)) {
+        knownModalTaskIds.add(taskId)
+      }
+    }
+    const knownBatchTaskIds = new Set<number>()
+    const activeBatchTaskId = parseTaskId(
+      creationStore.storyboardVideoBatchActiveVideoTaskId
+    )
+    if (activeBatchTaskId != null) knownBatchTaskIds.add(activeBatchTaskId)
+
+    const discovered = await discoverOngoingStoryboardGenerationTasks({
+      rows: tasks,
+      media: 'video',
+      loadDetail: (taskId) => userTaskDetailCached(taskId),
+      knownBatchTaskIds,
+      knownModalTaskIds
+    })
+    if (!matchesCreationLiveGenScope(scopeAtEntry)) return
+
+    const visible = discovered
+      .map((task) => ({
+        ...task,
+        storyboardIds: task.storyboardIds.filter((id) => currentStoryboardIds.has(id))
+      }))
+      .filter((task) => task.storyboardIds.length > 0)
+
+    const restoredStoryboardIds = new Set<number>()
+    for (const task of visible.filter((item) => item.owner === 'modal')) {
+      for (const storyboardId of task.storyboardIds) {
+        if (restoredStoryboardIds.has(storyboardId)) continue
+        restoredStoryboardIds.add(storyboardId)
+        const pair = pairs.find((item) => item.storyboardId === storyboardId)
+        const existing = creationStore.getStoryboardVideoGenTask(
+          storyboardId,
+          scopeAtEntry.scopeKey
+        )
+        if (existing && existing.taskId > task.taskId) continue
+        creationStore.setStoryboardVideoGenTask(
+          storyboardId,
+          {
+            taskId: task.taskId,
+            sceneIdx: pair?.index ?? 0,
+            taskKind: task.videoTaskKind
+          },
+          scopeAtEntry.scopeKey
+        )
+      }
+    }
+
+    const activeDescriptor = visible.find((task) => task.taskId === activeBatchTaskId)
+    const batchTasks = visible.filter((task) => task.owner === 'batch')
+    const batchTask =
+      batchTasks.find((task) => task.taskId === activeBatchTaskId) ?? batchTasks[0] ?? null
+
+    if (batchTask) {
+      if (creationStore.storyboardVideoBatchActiveVideoTaskId !== batchTask.taskId) {
+        syncActiveVideoTaskIdToStore(batchTask.taskId)
+      }
+      setVideoBatchTargetIds(batchTask.storyboardIds)
+      creationStore.setGeneratingStoryboardVideo(true)
+      creationStore.setStoryboardVideoBatchError(null)
+      markPanelsGenerating(batchTask.storyboardIds)
+    } else if (
+      activeDescriptor?.owner === 'modal' &&
+      creationStore.storyboardVideoBatchActivePromptTaskId == null
+    ) {
+      // Undo an old list-only restore that accidentally claimed a modal task as the batch owner.
+      syncActiveVideoTaskIdToStore(null)
+      creationStore.setGeneratingStoryboardVideo(false)
+      clearVideoBatchTargetIds()
+    }
+  }
+
   async function restoreOngoingBatchIfNeeded(
     scriptPanels: StoryboardPanel[],
     videoPanels: StoryboardVideoPanel[],
@@ -2798,15 +2891,15 @@ export function useStoryboardVideoBatchGenerate() {
         const gen = ++resumeFollowGeneration
 
         const preferredPromptId = creationStore.storyboardVideoBatchActivePromptTaskId
-        const preferredVideoIdEarly = creationStore.storyboardVideoBatchActiveVideoTaskId
-        const hasActiveTaskId =
+        let preferredVideoIdEarly = creationStore.storyboardVideoBatchActiveVideoTaskId
+        let hasActiveTaskId =
           parseTaskId(preferredPromptId) != null || parseTaskId(preferredVideoIdEarly) != null
-        const hasPersistedBatchState =
+        let hasPersistedBatchState =
           creationStore.isGeneratingStoryboardVideo ||
           hasActiveTaskId ||
           hasPersistedStoryboardVideoBatchGenWork(creationStore, route)
 
-        const pendingVideoTasksEarly = getPendingModalVideoTaskEntries()
+        let pendingVideoTasksEarly = getPendingModalVideoTaskEntries()
 
         let tasks: UserTaskRow[] = []
         let taskListOk = true
@@ -2826,6 +2919,19 @@ export function useStoryboardVideoBatchGenerate() {
         let liveVideoPanels = readLatestVideoPanels(videoPanels)
         let pairs = collectPairs(liveScriptPanels, liveVideoPanels)
         let storyboardIds = pairs.map((p) => p.storyboardId)
+
+        if (taskListOk) {
+          await reconcileOngoingVideoGenerationTasks(tasks, pairs, scopeAtEntry)
+          if (gen !== resumeFollowGeneration || !matchesCreationLiveGenScope(scopeAtEntry)) return
+          preferredVideoIdEarly = creationStore.storyboardVideoBatchActiveVideoTaskId
+          hasActiveTaskId =
+            parseTaskId(preferredPromptId) != null || parseTaskId(preferredVideoIdEarly) != null
+          hasPersistedBatchState =
+            creationStore.isGeneratingStoryboardVideo ||
+            hasActiveTaskId ||
+            hasPersistedStoryboardVideoBatchGenWork(creationStore, route)
+          pendingVideoTasksEarly = getPendingModalVideoTaskEntries()
+        }
 
         const listOngoingVideoId = parseTaskId(
           pickOngoingVideoGenerateTask(tasks, preferredVideoIdEarly)?.id
@@ -3246,7 +3352,7 @@ export function useStoryboardVideoBatchGenerate() {
           creationStore.storyboardPanelVideoGenStatusByStoryboardId
         ).filter(([, st]) => st === 'generating')
 
-        const pendingVideoTasks = pendingVideoTasksEarly ?? getPendingModalVideoTaskEntries()
+        const pendingVideoTasks = pendingVideoTasksEarly
 
         const hasPersistedTaskId =
           creationStore.storyboardVideoBatchActivePromptTaskId != null ||

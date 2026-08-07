@@ -1,9 +1,10 @@
 import type { ModelOption } from '~/components/steps/ModelSelectDropdown.vue'
 import type { UserModelListItem } from '~/types/business-api'
+import { resolveModelSupportsAudio } from '~/utils/modelCapability'
 
 export type UserModelOptionSource = Pick<
   UserModelListItem,
-  'id' | 'modelCode' | 'modelName' | 'providerName' | 'providerLogo'
+  'id' | 'modelCode' | 'modelName' | 'providerName' | 'providerLogo' | 'capability'
 >
 
 export interface MapUserModelOptionConfig {
@@ -13,7 +14,7 @@ export interface MapUserModelOptionConfig {
 
 const DEFAULT_ICON_BG = '#10B981'
 
-/** 将 model/list、listByFunc、gen-config/get 的模型项转为下拉选项（含 providerLogo） */
+/** 将 model/list、listByFunc、gen-config/get 的模型项转为下拉选项（含 providerLogo / 音画同步能力） */
 export function mapUserModelListItemToModelOption(
   item: UserModelOptionSource,
   config: MapUserModelOptionConfig = {}
@@ -28,7 +29,8 @@ export function mapUserModelListItemToModelOption(
     icon: logo || undefined,
     iconBg: config.iconBg ?? DEFAULT_ICON_BG,
     desc: item.providerName ? `服务商：${item.providerName}` : '',
-    prices: config.includePrices ? [] : []
+    prices: config.includePrices ? [] : [],
+    supportsAudio: resolveModelSupportsAudio(item as UserModelListItem)
   }
 }
 

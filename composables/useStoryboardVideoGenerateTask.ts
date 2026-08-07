@@ -199,6 +199,7 @@ async function submitAndFollowStoryboardVideoTask(payload: {
   submit: () => Promise<StoryboardVideoGenerateData>
   onProgress?: (p: StoryboardVideoGenerateProgress) => void
   onSubmitted?: (p: { taskId: number }) => void
+  notifyGlobalTasks?: boolean
   progressMessage: string
   submitErrorMessage: string
 }): Promise<StoryboardVideoGenerateResult> {
@@ -230,11 +231,8 @@ async function submitAndFollowStoryboardVideoTask(payload: {
 
   onSubmitted?.({ taskId })
 
-  if (typeof window !== 'undefined') {
-    const creationStore = useCreationStore()
-    if (!creationStore.isGeneratingStoryboardVideo) {
-      window.dispatchEvent(new CustomEvent('create-flow-global-tasks-updated'))
-    }
+  if (payload.notifyGlobalTasks !== false && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('create-flow-global-tasks-updated'))
   }
 
   const submitStatus = String(submitted.status || '').toUpperCase()
@@ -259,11 +257,13 @@ export async function runStoryboardImageVideoGenerateTask(payload: {
   body: StoryboardVideoImageGenerateRequest
   onProgress?: (p: StoryboardVideoGenerateProgress) => void
   onSubmitted?: (p: { taskId: number }) => void
+  notifyGlobalTasks?: boolean
 }): Promise<StoryboardVideoGenerateResult> {
   return submitAndFollowStoryboardVideoTask({
     submit: () => userStoryboardGenerateVideoImage(payload.body),
     onProgress: payload.onProgress,
     onSubmitted: payload.onSubmitted,
+    notifyGlobalTasks: payload.notifyGlobalTasks,
     progressMessage: '图生视频生成中…',
     submitErrorMessage: '提交图生视频失败'
   })
@@ -274,11 +274,13 @@ export async function runStoryboardMultiVideoGenerateTask(payload: {
   body: StoryboardVideoGenerateRequest
   onProgress?: (p: StoryboardVideoGenerateProgress) => void
   onSubmitted?: (p: { taskId: number }) => void
+  notifyGlobalTasks?: boolean
 }): Promise<StoryboardVideoGenerateResult> {
   return submitAndFollowStoryboardVideoTask({
     submit: () => userStoryboardGenerateVideo(payload.body),
     onProgress: payload.onProgress,
     onSubmitted: payload.onSubmitted,
+    notifyGlobalTasks: payload.notifyGlobalTasks,
     progressMessage: '多参视频生成中…',
     submitErrorMessage: '提交多参视频失败'
   })
@@ -289,11 +291,13 @@ export async function runStoryboardEdgeVideoGenerateTask(payload: {
   body: StoryboardVideoEdgeGenerateRequest
   onProgress?: (p: StoryboardVideoGenerateProgress) => void
   onSubmitted?: (p: { taskId: number }) => void
+  notifyGlobalTasks?: boolean
 }): Promise<StoryboardVideoGenerateResult> {
   return submitAndFollowStoryboardVideoTask({
     submit: () => userStoryboardGenerateVideoEdge(payload.body),
     onProgress: payload.onProgress,
     onSubmitted: payload.onSubmitted,
+    notifyGlobalTasks: payload.notifyGlobalTasks,
     progressMessage: '首尾帧视频生成中…',
     submitErrorMessage: '提交首尾帧视频失败'
   })
@@ -304,11 +308,13 @@ export async function runStoryboardGridVideoGenerateTask(payload: {
   body: StoryboardVideoGridGenerateRequest
   onProgress?: (p: StoryboardVideoGenerateProgress) => void
   onSubmitted?: (p: { taskId: number }) => void
+  notifyGlobalTasks?: boolean
 }): Promise<StoryboardVideoGenerateResult> {
   return submitAndFollowStoryboardVideoTask({
     submit: () => userStoryboardGenerateVideoGrid(payload.body),
     onProgress: payload.onProgress,
     onSubmitted: payload.onSubmitted,
+    notifyGlobalTasks: payload.notifyGlobalTasks,
     progressMessage: '宫格视频生成中…',
     submitErrorMessage: '提交宫格视频失败'
   })

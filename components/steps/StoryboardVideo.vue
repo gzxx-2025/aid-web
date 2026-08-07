@@ -671,7 +671,10 @@ import {
   formatStoryboardVideoTitle,
   resolveStoryboardListDisplayTitle
 } from '~/utils/storyboardPanelTitle'
-import { isProCreationMode, shouldPassStoryboardVideoDuration } from '~/utils/creationModeUiRules'
+import {
+  shouldPassStoryboardVideoDuration,
+  skipsStoryboardImageGeneration
+} from '~/utils/creationModeUiRules'
 import AsyncModalLoading from '~/components/common/AsyncModalLoading.vue'
 import {
   createPreloadableAsyncComponent,
@@ -808,11 +811,11 @@ async function applyVideoStepReorder(from: number, insertBefore: number) {
 
 // 规则：1）生成了分镜脚本且列表中至少有一条有分镜图或参考图（场景道具角色设置的场景图）可点击；
 // 2）分镜是「添加分镜」生成的，只要有一条设置了分镜图也可点击。参考图与分镜视频列表同步，由大模型返回不一定每条都有。
-// 3）专业版（pro）不出分镜图，有分镜脚本即可批量生成分镜视频，不校验分镜图/参考图。
+// 3）专业版 / 多参数不出分镜图，有分镜脚本即可批量生成分镜视频，不校验分镜图/参考图。
 const canAutoGenerateVideo = computed(() => {
   const scriptPanels = props.storyboardScriptPanels || []
   if (scriptPanels.length === 0) return false
-  if (isProCreationMode(creationStore.formData.globalSetting?.creationMode)) {
+  if (skipsStoryboardImageGeneration(creationStore.formData.globalSetting?.creationMode)) {
     return true
   }
   const hasImageOrRef = (p: any) => {
@@ -825,12 +828,12 @@ const canAutoGenerateVideo = computed(() => {
   return scriptPanels.some(hasImageOrRef)
 })
 
-/** 批量生成分镜视频不可用时的提示（专业版不提示「需先有分镜图」） */
+/** 批量生成分镜视频不可用时的提示（专业版/多参数不提示「需先有分镜图」） */
 const batchVideoDisabledTooltip = computed(() => {
   if (canAutoGenerateVideo.value) {
     return panels.value.length === 0 ? '暂无分镜视频' : ''
   }
-  if (isProCreationMode(creationStore.formData.globalSetting?.creationMode)) {
+  if (skipsStoryboardImageGeneration(creationStore.formData.globalSetting?.creationMode)) {
     return '暂无分镜视频'
   }
   return '需先有分镜图或参考图（至少一条）'

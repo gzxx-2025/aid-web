@@ -230,7 +230,28 @@
                     >
                       <span class="preview-export-menu__btn-text">导出分段素材</span>
                     </button>
+                    <a-tooltip
+                      v-if="publishToCasePlazaDisabled"
+                      :title="publishToCasePlazaTooltip"
+                      placement="left"
+                      :overlay-style="{ zIndex: 11000, maxWidth: '280px' }"
+                      :get-popup-container="getPublishTooltipPopupContainer"
+                    >
+                      <span
+                        class="preview-export-menu__btn-wrap"
+                      >
+                        <button
+                          type="button"
+                          class="preview-export-menu__btn"
+                          role="menuitem"
+                          disabled
+                        >
+                          <span class="preview-export-menu__btn-text">发布至案例广场</span>
+                        </button>
+                      </span>
+                    </a-tooltip>
                     <button
+                      v-else
                       type="button"
                       class="preview-export-menu__btn"
                       role="menuitem"
@@ -255,6 +276,14 @@
             </div>
           </div>
           <div class="preview_bg_box">
+            <div
+              v-if="previewAuditFailureReason"
+              class="preview-audit-failure"
+              role="alert"
+            >
+              <span class="preview-audit-failure__title">审核失败</span>
+              <span class="preview-audit-failure__reason">{{ previewAuditFailureReason }}</span>
+            </div>
             <div
               v-if="!isSeriesFlowChrome"
               class="create-workflow"
@@ -488,10 +517,15 @@ import {
 import { suspendAllTaskSseFollows } from '~/composables/useTaskSseFollow'
 import { message, Modal } from 'ant-design-vue'
 import {
+  isFullVideoExportStale,
   isProjectPublicLockError,
+  isProjectPublished,
+  PUBLISH_STALE_EXPORT_TIP,
   projectPublicLockUserHint,
+  resolvePublishToCasePlazaBlockReason,
   shouldConfirmReplacePublishedVideo
 } from '~/utils/projectAudit'
+import { syncFullVideoExportMediaToStore } from '~/utils/syncFullVideoExportMedia'
 import { LeftOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 import { defineAsyncComponent } from 'vue'
 import HomeSidebar from '~/components/layout/HomeSidebar.vue'
@@ -541,6 +575,7 @@ import { useCreateFlowSidebarChrome } from '~/composables/useCreateFlowSidebarCh
 import { useCreateFlowShellLiveGenBootstrap } from '~/composables/useCreateFlowShellLiveGenBootstrap'
 import { useGlobalSettingProjectHydrate } from '~/composables/useGlobalSettingProjectHydrate'
 import { useCreateFlowTitleMeasure } from '~/composables/useCreateFlowTitleMeasure'
+import { usePreviewPublicationState } from '~/composables/usePreviewPublicationState'
 import { htmlPlainTextLength } from '~/utils/htmlPlain'
 import { userEpisodeList, userProjectUpdate } from '~/utils/businessApi'
 import {
@@ -658,23 +693,82 @@ const nextStepDelayLoading = ref(false)
 const showProjectGenConfigModal = ref(false)
 
 const isPreviewStep = computed(() => flowStepIndex.value >= steps.length - 1)
+const {
+  isPublished: previewIsPublished,
+  auditFailureReason: previewAuditFailureReason
+} = usePreviewPublicationState({ pageReady, isPreviewStep })
 /** shallow：避免桥接内 Ref 被深层解包导致 loading 状态丢失 */
 const previewExportBridge = shallowRef<PreviewExportBridge | null>(null)
 const exportMenuOpen = ref(false)
 /** 已确认「新版替换旧版」的 pendingVideoUrl；换新片后需再确认 */
 const replacePublishedVideoAckedUrl = ref('')
+/** 已确认「工程已改待重新导出」类替换提示；导出状态变化后重置 */
+const replaceStaleExportAcked = ref(false)
+/**
+ * 图二确认后若当前仍是「旧版待重导」，强制禁用发布直至本次重新导出完整视频成功。
+ * 避免残留 pendingVideoUrl + 本地 status 未刷新时误开放发布入口。
+ */
+const publishBlockedUntilFreshExport = ref(false)
 const exportedEpisodeEditorId = ref<number | null>(null)
+
+const fullVideoExportState = computed(() => ({
+  finalVideoUrl: creationStore.currentFinalVideoUrl,
+  pendingVideoUrl: creationStore.currentPendingVideoUrl,
+  exportStatus: creationStore.currentExportStatus
+}))
+
+/** 未导出 / 工程已改待重新导出：禁用并悬停提示 */
+const publishToCasePlazaTooltip = computed(() => {
+  if (publishBlockedUntilFreshExport.value) return PUBLISH_STALE_EXPORT_TIP
+  return resolvePublishToCasePlazaBlockReason(fullVideoExportState.value) || ''
+})
+const publishToCasePlazaDisabled = computed(() => Boolean(publishToCasePlazaTooltip.value))
+
+function getPublishTooltipPopupContainer() {
+  return document.body
+}
+
+const hasPublishedHistory = computed(() => {
+  if (previewIsPublished.value || isProjectPublished(creationStore.currentProjectIsPublic)) {
+    return true
+  }
+  const status =
+    creationStore.currentProjectType === 'series'
+      ? creationStore.currentEpisodeStatus
+      : creationStore.currentProjectStatus
+  return status === 4
+})
+
+watch(
+  () =>
+    [
+      creationStore.currentExportStatus,
+      creationStore.currentFinalVideoUrl,
+      creationStore.currentPendingVideoUrl,
+      creationStore.currentProjectId,
+      creationStore.currentEpisodeId
+    ] as const,
+  () => {
+    replaceStaleExportAcked.value = false
+  }
+)
 
 async function confirmReplacePublishedVideoIfNeeded(): Promise<boolean> {
   const pendingVideoUrl = String(creationStore.currentPendingVideoUrl || '').trim()
+  const exportState = fullVideoExportState.value
   if (
     !shouldConfirmReplacePublishedVideo({
       pendingVideoUrl,
-      ackedPendingVideoUrl: replacePublishedVideoAckedUrl.value
+      ackedPendingVideoUrl: replacePublishedVideoAckedUrl.value,
+      finalVideoUrl: exportState.finalVideoUrl,
+      exportStatus: exportState.exportStatus,
+      hasPublishedHistory: hasPublishedHistory.value,
+      staleExportAcked: replaceStaleExportAcked.value
     })
   ) {
     return true
   }
+  const confirmingStale = isFullVideoExportStale(exportState)
   return new Promise((resolve) => {
     Modal.confirm({
       title: '提示',
@@ -683,7 +777,13 @@ async function confirmReplacePublishedVideoIfNeeded(): Promise<boolean> {
       cancelText: '取消',
       centered: true,
       onOk: () => {
-        replacePublishedVideoAckedUrl.value = pendingVideoUrl
+        if (confirmingStale) {
+          replaceStaleExportAcked.value = true
+          // 改过内容后确认替换：必须先导出新版再发布
+          publishBlockedUntilFreshExport.value = true
+        } else if (pendingVideoUrl) {
+          replacePublishedVideoAckedUrl.value = pendingVideoUrl
+        }
         resolve(true)
       },
       onCancel: () => resolve(false)
@@ -700,11 +800,17 @@ async function onExportMenuOpenChange(open: boolean) {
     exportMenuOpen.value = false
     return
   }
+  // 打开前同步 exportStatus，避免本地仍是旧的「导出成功」态导致无法拦截发布
+  try {
+    await syncFullVideoExportMediaToStore(creationStore)
+  } catch {
+    // 同步失败不阻断打开菜单，仍走本地已有状态判断
+  }
   const ok = await confirmReplacePublishedVideoIfNeeded()
   exportMenuOpen.value = ok
 }
 const saveExportedLocalLoading = ref(false)
-/** 「发布至案例广场」四接口链路执行中（更新项目 → 合成 → 提审 → 发布） */
+/** 「发布至案例广场」链路执行中（更新项目 → 按需提审 → 发布；不再合成完整视频） */
 const publishFlowRunning = ref(false)
 const publishCasePlazaModalOpen = ref(false)
 
@@ -740,6 +846,8 @@ async function onExportFullVideo() {
   }
   const result = await bridge.exportFullVideo()
   if (!result?.videoUrl) return
+  // 二次导出成功后恢复「发布至案例广场」
+  publishBlockedUntilFreshExport.value = false
   const editorId = Number(result.episodeEditorId)
   exportedEpisodeEditorId.value =
     Number.isFinite(editorId) && editorId > 0 ? editorId : creationStore.currentEpisodeEditorId
@@ -759,6 +867,7 @@ async function onExportSegments() {
 /** 完整导出成功（含切步/刷新恢复场景）：自动保存至本地；发布链路合成不触发下载 */
 function handlePreviewExportSuccess(_videoUrl: string) {
   if (publishFlowRunning.value) return
+  publishBlockedUntilFreshExport.value = false
   exportedEpisodeEditorId.value = creationStore.currentEpisodeEditorId
   void saveExportedVideoToLocal()
 }
@@ -806,7 +915,7 @@ async function saveExportedVideoToLocal() {
   }
 }
 
-/** 发布至案例广场入口：先弹出封面/描述弹窗（弹窗内完成更新项目接口） */
+/** 发布至案例广场入口：需已有当前可用成片；合成/下载仅「导出完整视频」可触发 */
 function onPublishToCasePlaza() {
   exportMenuOpen.value = false
   if (publishFlowRunning.value || publishCasePlazaModalOpen.value) return
@@ -815,15 +924,20 @@ function onPublishToCasePlaza() {
     message.warning('缺少项目信息，无法发布')
     return
   }
+  const blockReason = resolvePublishToCasePlazaBlockReason(fullVideoExportState.value)
+  if (blockReason) {
+    message.warning(blockReason)
+    return
+  }
   publishCasePlazaModalOpen.value = true
 }
 
 /**
  * 发布链路（严格顺序，任一步失败即终止）：
  * 1. 更新项目封面/描述（已在弹窗内完成，成功才会回调到这里）
- * 2. 合成完整视频（同导出完整视频接口）
- * 3. 提交审核 / 重新提交审核
- * 4. 发布
+ * 2. 提交审核 / 重新提交审核（按需）
+ * 3. 发布
+ * 不再调用合成完整视频 / 下载接口（仅「导出完整视频」可触发）
  */
 async function onPublishCasePlazaMetaSuccess(payload: {
   projectId: number
@@ -841,17 +955,13 @@ async function onPublishCasePlazaMetaSuccess(payload: {
       }
     })
   }
-  const bridge = previewExportBridge.value
-  if (!bridge) {
-    message.warning('预览页尚未就绪，请稍后再试')
+  const blockReason = resolvePublishToCasePlazaBlockReason(fullVideoExportState.value)
+  if (blockReason) {
+    message.warning(blockReason)
     return
   }
   publishFlowRunning.value = true
   try {
-    // 第 2 步：合成完整视频；失败（返回 null）则终止，不再提审/发布
-    const result = await bridge.exportFullVideo()
-    if (!result?.videoUrl) return
-    // 第 3、4 步：提交审核（或重新提审），成功后再调用发布接口（须带封面与描述）
     await handleSubmit({
       alsoPublish: true,
       coverUrl: nextCover,
@@ -2703,6 +2813,16 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 8px;
   box-sizing: border-box;
+}
+
+.preview-export-menu__btn-wrap {
+  display: block;
+  width: 182px;
+  max-width: 100%;
+}
+
+.preview-export-menu__btn-wrap .preview-export-menu__btn {
+  width: 100%;
 }
 
 .preview-export-menu__title {

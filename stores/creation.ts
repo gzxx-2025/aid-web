@@ -1412,13 +1412,16 @@ export const useCreationStore = defineStore('creation', {
 
       const projectChanged =
         payload.projectId !== undefined && Number(prevProjectId ?? 0) !== Number(nextProjectId ?? 0)
-      const episodeChanged =
-        payload.episodeId !== undefined && normEp(prevEpisodeId) !== normEp(nextEpisodeId)
+      // 切作品未显式带 episodeId 时清空旧集，避免剧集 episodeId 串进电影/新作品请求
+      if (projectChanged && payload.episodeId === undefined) {
+        nextEpisodeId = null
+      }
+      const episodeChanged = normEp(prevEpisodeId) !== normEp(nextEpisodeId)
 
       const prevScopeKey = liveGenScopeKeyFromIds(prevProjectId, prevEpisodeId)
       const nextScopeKey = liveGenScopeKeyFromIds(
         payload.projectId !== undefined ? nextProjectId : prevProjectId,
-        payload.episodeId !== undefined ? nextEpisodeId : prevEpisodeId
+        nextEpisodeId
       )
       const scopeWillChange = (projectChanged || episodeChanged) && prevScopeKey !== nextScopeKey
 
@@ -1437,10 +1440,12 @@ export const useCreationStore = defineStore('creation', {
           this.seriesFlowEnteredStoryScript = false
           this.seriesEpisodeListTotal = null
           this.hydratePausedTaskFollowFromSession(nextProjectId)
+          // 作品已变，类型须等 project/detail hydrate；避免沿用上一作品 series/movie
+          this.currentProjectType = null
         }
         this.currentProjectId = nextProjectId
       }
-      if (payload.episodeId !== undefined) {
+      if (payload.episodeId !== undefined || (projectChanged && payload.episodeId === undefined)) {
         this.currentEpisodeId = nextEpisodeId
       }
 

@@ -423,11 +423,6 @@ html.app-shell-create .ant-modal-confirm .ant-modal-confirm-btns .ant-btn-primar
 html.app-shell-create .create-flow-modal .ant-modal-content > * {
   color: #e6edf3 !important;
 }
-
-html.app-shell-create .ant-modal .ant-modal-footer {
-  border-top-color: rgba(74, 231, 253, 0.12) !important;
-}
-
 html.app-shell-create .publish-case-plaza-modal-wrap .ant-modal-footer {
   display: flex !important;
   flex-direction: row !important;

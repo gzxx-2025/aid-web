@@ -296,26 +296,21 @@ async function resolveSubmitDefaultsFromGenConfig(): Promise<{
   const projectId = Number(creationStore.currentProjectId)
   const sceneCode = resolveBizCategoryCode()
   let agent = ''
-  let model = String(props.defaultModelCode || '').trim()
-  let resolution = '4k'
+  /** 生成配置优先；defaultModelCode 仅作无配置时的兜底（避免旧 extractImageModelCodes 盖住新配置） */
+  let model = ''
+  /** 透传生成配置清晰度；勿写死 4k，也不要只认 1k/2k/4k（Image2 等为 1024x1024） */
+  let resolution = ''
   if (Number.isFinite(projectId) && projectId > 0) {
     try {
       const cfg = await getProjectGenConfigBySceneCode(projectId, sceneCode)
       agent = String(cfg?.agentCode || '').trim()
-      if (!model) model = String(cfg?.modelCode || '').trim()
-      const cfgRes = String(cfg?.resolution || '').trim()
-      if (cfgRes) {
-        const normalized = cfgRes.toLowerCase()
-        if (normalized === '1k' || normalized === '2k' || normalized === '4k') {
-          resolution = normalized
-        } else if (cfgRes === '1K' || cfgRes === '2K' || cfgRes === '4K') {
-          resolution = cfgRes.toLowerCase()
-        }
-      }
+      model = String(cfg?.modelCode || '').trim() || String(props.defaultModelCode || '').trim()
+      resolution = String(cfg?.resolution || '').trim()
     } catch {
       /* ignore：交给下方空 agent 提示 */
     }
   }
+  if (!model) model = String(props.defaultModelCode || '').trim()
   if (!agent) {
     message.warning(
       isSettingCardMode.value

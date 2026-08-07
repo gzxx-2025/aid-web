@@ -31,7 +31,7 @@
               <div v-if="isSceneVideoGenerating(index)" class="thumbnail-loading-wrap">
                 <LoadingOutlined spin class="thumbnail-loading-icon" />
               </div>
-              <!-- 优先用分镜图封面（轻量），避免顶部 Tab 并发拉齐 mp4 -->
+              <!-- 优先分镜图封面；无封面但已设主视频时用 metadata 首帧（lazy+gated 限流） -->
               <div v-else-if="tab.coverImageUrl" class="thumbnail-video-wrap">
                 <ShimmerImage
                   :src="tab.coverImageUrl"
@@ -40,17 +40,15 @@
                   reveal-direction="fade"
                 />
               </div>
-              <div
-                v-else-if="tab.videoUrl && index === currentSceneIndex"
-                class="thumbnail-video-wrap"
-              >
+              <div v-else-if="tab.videoUrl" class="thumbnail-video-wrap">
                 <ShimmerVideo
                   :src="tab.videoUrl"
                   video-class="thumbnail-video"
                   object-fit="cover"
                   reveal-direction="fade"
                   preload="metadata"
-                  :gated="false"
+                  :lazy="index !== currentSceneIndex"
+                  :gated="index !== currentSceneIndex"
                 />
               </div>
               <div v-else class="thumbnail-placeholder">
@@ -964,6 +962,7 @@ import StoryboardGeneratePanel from './StoryboardGeneratePanel.vue'
 import type { ParamSettingsConfirmPayload } from './StoryboardParamSettingsModal.vue'
 import StoryboardScriptModal from './StoryboardScriptModal.vue'
 import { uploadVideoToOssWithToast } from '~/utils/ossUpload'
+import { readVideoDurationSeconds } from '~/utils/videoDuration'
 import ImportScriptModal from './ImportScriptModal.vue'
 import GenerateModelConfigBlock from './GenerateModelConfigBlock.vue'
 import ModelSelectDropdown, { type ModelOption } from './ModelSelectDropdown.vue'
@@ -4338,7 +4337,7 @@ function resolveSceneCoverImageUrl(sceneIdx: number): string {
 
 function resolveSceneTabVideoUrl(sceneIdx: number, tabThumbnailUrl?: string): string {
   const fromTab = String(tabThumbnailUrl || '').trim()
-  // headerTabs 里可能仍是视频记录 fileUrl；仅当没有封面图时留给当前 Tab 用
+  // headerTabs 里可能仍是视频记录 fileUrl；无分镜图封面时用于 Tab 首帧
   if (fromTab && !/\.(png|jpe?g|webp|gif|bmp|svg)(\b|$)/i.test(fromTab.split('?')[0]!)) {
     return fromTab
   }
@@ -4347,13 +4346,19 @@ function resolveSceneTabVideoUrl(sceneIdx: number, tabThumbnailUrl?: string): st
 
 const sceneTabsForHeader = computed(() =>
   headerTabsForDisplay.value.map((tab, i) => {
+    const mainFromScene = String(getFirstVideo(i)?.url || '').trim()
+    const hasMainVideo = tab.hasFinalAsset || !!mainFromScene
     const coverImageUrl = resolveSceneCoverImageUrl(i)
-    const videoUrl = coverImageUrl ? '' : resolveSceneTabVideoUrl(i, tab.thumbnailUrl)
+    // 仅已设主视频才挂视频首帧；优先 scenes 主视频，其次 header 的 isSelected 记录
+    const videoUrl = coverImageUrl
+      ? ''
+      : mainFromScene ||
+        (tab.hasFinalAsset ? resolveSceneTabVideoUrl(i, tab.thumbnailUrl) : '')
     return {
       storyboardId: tab.storyboardId,
       tabLabel: formatStoryboardVideoTabLabel(
         tab.name || props.scenes[i]?.name || '',
-        tab.hasFinalAsset || !!getFirstVideo(i)?.url,
+        hasMainVideo,
         i
       ),
       coverImageUrl,
@@ -5155,12 +5160,15 @@ async function persistManualStoryboardVideoUrl(videoUrl: string): Promise<number
   const ctx = await resolveStoryScriptSaveContext(creationStore, route)
   if (!ctx) return null
 
+  const videoDuration = await readVideoDurationSeconds(url)
+
   const record = await userStoryboardUpload({
     projectId: ctx.projectId,
     episodeId: ctx.episodeId,
     storyboardId,
     imageUrl: url,
-    mediaType: 'video'
+    mediaType: 'video',
+    videoDuration
   })
   const recordId = Number(record?.id)
   return Number.isFinite(recordId) && recordId > 0 ? recordId : null
@@ -5432,6 +5440,7 @@ function handleUploadLocalVideo() {
 
     const hideLoading = message.loading('正在上传视频...', 0)
     try {
+      const videoDuration = await readVideoDurationSeconds(file)
       const url = await uploadVideoToOssWithToast(file)
       if (!url) return
 
@@ -5440,9 +5449,10 @@ function handleUploadLocalVideo() {
         episodeId: ctx.episodeId,
         storyboardId,
         imageUrl: url,
-        mediaType: 'video'
+        mediaType: 'video',
+        videoDuration
       })
-      await refreshVideoRecords(currentSceneIndex.value, { focusLatest: true })
+      await refreshVideoRecordsFresh(currentSceneIndex.value, { focusLatest: true })
       message.success('视频已添加')
     } catch (err: unknown) {
       const ax = err as { msg?: string; message?: string }
@@ -5499,14 +5509,16 @@ function handleVideoLibraryImport(asset: any) {
 
     const hideLoading = message.loading('正在导入视频...', 0)
     try {
+      const videoDuration = await readVideoDurationSeconds(String(url))
       await userStoryboardUpload({
         projectId: ctx.projectId,
         episodeId: ctx.episodeId,
         storyboardId,
         imageUrl: url,
-        mediaType: 'video'
+        mediaType: 'video',
+        videoDuration
       })
-      await refreshVideoRecords(currentSceneIndex.value, { focusLatest: true })
+      await refreshVideoRecordsFresh(currentSceneIndex.value, { focusLatest: true })
       message.success('视频已添加')
     } catch (err: unknown) {
       const ax = err as { msg?: string; message?: string }

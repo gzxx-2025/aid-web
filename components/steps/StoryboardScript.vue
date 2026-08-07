@@ -51,7 +51,7 @@
           <template #icon><PlusOutlined /></template>
           添加分镜
         </a-button>
-        <!-- 专业版：隐藏批量操作，仅保留「自动生成分镜」入口 -->
+        <!-- 专业版 / 多参数：隐藏批量操作，仅保留「自动生成分镜」入口 -->
         <a-button
           v-if="isProMode && !isGenerating && !isGeneratingImageBatch"
           size="small"
@@ -721,7 +721,7 @@ import {
   useStoryboardWorkbenchMutations
 } from '~/composables/useStoryboardWorkbenchMutations'
 import { createFlowShellKey } from '~/utils/createFlowInjection'
-import { isProCreationMode } from '~/utils/creationModeUiRules'
+import { skipsStoryboardImageGeneration } from '~/utils/creationModeUiRules'
 import {
   captureCreationLiveGenScope,
   matchesCreationLiveGenScope
@@ -858,9 +858,9 @@ let pageDisposed = false
 let pageMounted = false
 const listInteractive = ref(true)
 
-/** 专业版：分镜步骤仅脚本，无分镜图 / 批量图操作 */
+/** 专业版 / 多参数：分镜步骤仅脚本，无分镜图 / 批量图操作 */
 const isProMode = computed(() =>
-  isProCreationMode(creationStore.formData.globalSetting?.creationMode)
+  skipsStoryboardImageGeneration(creationStore.formData.globalSetting?.creationMode)
 )
 
 const storyboardListLoading = computed(() => createFlowShell?.storyboardListLoading.value ?? false)

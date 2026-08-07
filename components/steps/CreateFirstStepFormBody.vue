@@ -130,7 +130,7 @@
                 </span>
               </a-tooltip>
               <a-tooltip
-                v-else-if="opt.value === 'pro'"
+                v-else-if="skipsStoryboardImageGeneration(opt.value)"
                 :title="PRO_MODE_NO_STORYBOARD_IMAGE_TIP"
               >
                 <span class="chip-tooltip-wrap">
@@ -195,7 +195,8 @@ import {
   isCreationModeDisabledForScriptType,
   isScriptTypeLockedToPlot,
   PRO_MODE_NO_STORYBOARD_IMAGE_TIP,
-  resolveCreationModeForScriptType
+  resolveCreationModeForScriptType,
+  skipsStoryboardImageGeneration
 } from '~/utils/creationModeUiRules'
 import ratio16by9Icon from '~/assets/img/createProcess/16-9.svg'
 import ratio9by16Icon from '~/assets/img/createProcess/9-16.svg'

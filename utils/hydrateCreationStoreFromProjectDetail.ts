@@ -69,7 +69,8 @@ export function buildGlobalSettingFromProjectDetail(
   return {
     ...base,
     title: detail.projectName || base.title || '',
-    description: detail.projectDesc || base.description || '',
+    // 作品描述按当前 project 为准；空串不得回退到 previous，否则切作品会串上一作品文案
+    description: String(detail.projectDesc || '').trim(),
     aspectRatio: mapProjectAspectRatio(detail.aspectRatio),
     scriptType: mapProjectScriptType(detail.scriptType),
     modelStrategy: mapProjectModelStrategy(detail.defaultGenMode),

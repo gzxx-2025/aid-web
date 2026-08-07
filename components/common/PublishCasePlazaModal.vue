@@ -9,11 +9,6 @@
     :closable="!busy"
     wrap-class-name="create-flow-modal publish-case-plaza-modal-wrap"
     class="publish-case-plaza-modal"
-    :ok-text="okText"
-    cancel-text="取消"
-    :ok-button-props="{ loading: submitting, disabled: busy && !submitting }"
-    :cancel-button-props="{ disabled: busy }"
-    @ok="handleConfirm"
     @cancel="handleCancel"
   >
     <div v-if="hydrating" class="publish-case-plaza__loading">加载中…</div>
@@ -88,6 +83,27 @@
         />
       </div>
     </div>
+
+    <template #footer>
+      <div class="publish-case-plaza__footer">
+        <a-button
+          class="publish-case-plaza__btn-cancel"
+          :disabled="busy"
+          @click="handleCancel"
+        >
+          <span class="text-gradient">取消</span>
+        </a-button>
+        <a-button
+          type="primary"
+          class="publish-case-plaza__btn-ok"
+          :loading="submitting"
+          :disabled="busy && !submitting"
+          @click="handleConfirm"
+        >
+          {{ okText }}
+        </a-button>
+      </div>
+    </template>
   </a-modal>
 </template>
 
@@ -165,25 +181,31 @@ async function hydrateForm() {
     return
   }
 
+  // 打开时先清空，避免 modal 实例复用时残留上一作品表单
+  coverUrl.value = ''
+  projectDesc.value = ''
+
   const initialCover = String(props.initialCoverUrl || '').trim()
   const initialDesc = String(props.initialProjectDesc || '').trim()
 
-  // 入口已带齐字段则不再请求 detail
-  if (initialCover || initialDesc) {
+  // 入口已带齐字段则不再请求 detail（仅作乐观回显；两侧都有才跳过）
+  if (initialCover && initialDesc) {
     coverUrl.value = initialCover
     projectDesc.value = initialDesc.slice(0, DESC_MAX)
-    if (initialCover && initialDesc) return
+    return
   }
+
+  if (initialCover) coverUrl.value = initialCover
+  if (initialDesc) projectDesc.value = initialDesc.slice(0, DESC_MAX)
 
   hydrating.value = true
   try {
     const detail = await fetchUserProjectDetailOnce(pid)
-    if (!coverUrl.value) {
-      coverUrl.value = String(detail.coverUrl || '').trim()
-    }
-    if (!projectDesc.value) {
-      projectDesc.value = String(detail.projectDesc || '').trim().slice(0, DESC_MAX)
-    }
+    const detailCover = String(detail.coverUrl || '').trim()
+    const detailDesc = String(detail.projectDesc || '').trim().slice(0, DESC_MAX)
+    // 已拉取当前 project 的 detail 时，以服务端为准（含空描述），避免 store/initial 跨作品残留盖住真相
+    if (detailCover) coverUrl.value = detailCover
+    projectDesc.value = detailDesc
   } catch (e: unknown) {
     const err = e as { msg?: string; message?: string }
     // 有局部 initial 时详情失败不阻断编辑
@@ -233,7 +255,7 @@ function handleCancel() {
   emit('update:open', false)
 }
 
-async function handleConfirm(e: Event) {
+async function handleConfirm(e?: Event) {
   e?.preventDefault?.()
   if (busy.value) return
 
@@ -444,16 +466,79 @@ async function handleConfirm(e: Event) {
   flex-wrap: nowrap !important;
   justify-content: flex-end !important;
   align-items: center !important;
-  gap: 8px !important;
   text-align: end !important;
 }
 
-.publish-case-plaza-modal-wrap .ant-modal-footer .ant-btn {
+.publish-case-plaza-modal-wrap .publish-case-plaza__footer {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100%;
+}
+
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-cancel.ant-btn,
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-ok.ant-btn {
   display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: auto !important;
-  min-width: 88px !important;
+  min-width: 96px !important;
+  height: 40px !important;
+  padding: 0 16px !important;
   flex: 0 0 auto !important;
-  margin-inline-start: 0 !important;
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-cancel.ant-btn {
+  border: 1px solid rgba(74, 231, 253, 0.35) !important;
+  background: rgba(18, 18, 18, 0.92) !important;
+  color: #e6edf3 !important;
+}
+
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-cancel.ant-btn .text-gradient {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: 1 !important;
+}
+
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-cancel.ant-btn:hover:not(:disabled) {
+  border-color: rgba(74, 231, 253, 0.55) !important;
+  background: rgba(74, 231, 253, 0.12) !important;
+  color: #4ae7fd !important;
+}
+
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-cancel.ant-btn:hover:not(:disabled) .text-gradient {
+  color: #4ae7fd !important;
+  -webkit-text-fill-color: #4ae7fd !important;
+}
+
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-ok.ant-btn {
+  border: none !important;
+  background: linear-gradient(270deg, #0e59fa 0%, #00abd8 100%) !important;
+  color: #fff !important;
+}
+
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-ok.ant-btn:hover:not(:disabled) {
+  background: linear-gradient(270deg, #2a6cfb 0%, #4ae7fd 100%) !important;
+  color: #fff !important;
+}
+
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-cancel.ant-btn:disabled,
+.publish-case-plaza-modal-wrap .publish-case-plaza__btn-ok.ant-btn:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
 }
 
 .publish-case-plaza-modal-wrap .ant-modal-body .ant-input-textarea textarea {

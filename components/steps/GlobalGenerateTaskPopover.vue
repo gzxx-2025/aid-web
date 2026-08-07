@@ -573,7 +573,6 @@ watch(
 const GLOBAL_TASKS_EVENT = 'create-flow-global-tasks-updated'
 
 function onGlobalTasksUpdated(event: Event) {
-  if (creationStore.isGeneratingStoryboardVideo) return
   if (!props.projectId) return
   const tid = Number((event as CustomEvent<{ taskId?: number }>).detail?.taskId)
   if (Number.isFinite(tid) && tid > 0) markUserTaskLocallyTerminal(tid)

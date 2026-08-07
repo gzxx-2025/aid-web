@@ -213,7 +213,7 @@
             <a-textarea
               v-model:value="assetForm.promptText"
               :rows="4"
-              maxlength="500"
+              maxlength="3000"
               placeholder="请输入"
             />
           </a-form-item>

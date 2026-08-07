@@ -1904,8 +1904,9 @@ async function resolveFormImageApiSubmitFields(
 ) {
   const projectId = resolveCurrentProjectId()
   const sceneCode = FORM_IMAGE_SCENE_CODE_BY_TYPE[tab]
-  const manualModel =
-    String(opts?.modelFromModal || '').trim() || resolveStoredExtractImageModelCode(tab) || ''
+  // 仅批量弹窗显式选模时覆盖；自动生成/重新生成必须走「生成配置」，
+  // 禁止用 extractImageModelCodes 历史值盖住用户刚保存的模型。
+  const manualModel = String(opts?.modelFromModal || '').trim()
   const validatedModel = manualModel
     ? await resolveSubmitImageModelCode(tab, manualModel)
     : undefined

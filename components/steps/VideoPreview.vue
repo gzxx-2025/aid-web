@@ -1796,6 +1796,8 @@ function applyDubbingPanelToTimeline(index: number, dub: DubbingPanel): boolean 
         duration: subtitleDuration
       })
     }
+  } else if (!subtitleText && sub?.id === `sub-${clip.id}`) {
+    subtitleItems.value = subtitleItems.value.filter((item) => item.id !== sub.id)
   } else if (!subtitleText && sub) {
     sub.text = ''
   }
@@ -2126,7 +2128,6 @@ function buildTimelineFromProps(options?: { showSuccessMessage?: boolean }): boo
       nextVoice.push(timelineVoice)
     }
 
-    // 原生音画视频没有独立配音 URL，字幕仍应按分镜台词创建并覆盖整个视频片段。
     if (subtitleText) {
       nextSub.push({
         id: `sub-${clip.id}`,

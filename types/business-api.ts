@@ -1984,6 +1984,8 @@ export interface StoryboardUploadRequest {
   imageUrl: string
   /** 不传默认 image；image→gen_type=image，video→gen_type=upload_video */
   mediaType?: StoryboardUploadMediaType
+  /** 视频时长（秒）；mediaType=video 时必填，由浏览器读取媒体元数据后传入 */
+  videoDuration?: number
 }
 
 /** POST /api/user/storyboard/upload 出参 data */
@@ -1998,6 +2000,7 @@ export interface StoryboardUploadData {
   costCredits?: number | null
   isSelected?: number | null
   status?: string | null
+  videoDuration?: number | null
   createTime?: string | null
 }
 

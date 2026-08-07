@@ -30,6 +30,9 @@ function parseRouteEpisodeId(route: RouteLocationNormalizedLoaded): number | nul
 
 /**
  * 解析剧本保存/拉取所需的 projectId + episodeId（与 detailByProject 一致：电影 episodeId=0，剧集需有效集 ID）
+ *
+ * 切作品窗口期：route 已是新 projectId，store 仍可能残留上一作品的 projectType/episodeId。
+ * 此时不得混用「新 projectId + 旧剧集 episodeId」，否则 detailByProject 会误带剧集 ID 报错。
  */
 export async function resolveStoryScriptSaveContext(
   store: CreationLike,
@@ -38,36 +41,37 @@ export async function resolveStoryScriptSaveContext(
   const projectId = resolveProjectIdFromRouteAndStore(store, route)
   if (!projectId) return null
 
-  let projectType = store.currentProjectType
+  const storePid = Number(store.currentProjectId)
+  const storeMatchesProject =
+    Number.isFinite(storePid) && storePid > 0 && storePid === projectId
+
+  // store 仍指向上一作品时，其 projectType 不可信，必须按当前 projectId 取权威类型
+  let projectType: UserProjectType | null = storeMatchesProject ? store.currentProjectType : null
   if (!projectType) {
     try {
       const detail = await fetchUserProjectDetailOnce(projectId)
       projectType = detail.projectType
-      store.setCurrentProjectType(projectType)
+      // 仅当 store 已对齐到同一作品时回写，避免把新类型写进旧作品上下文
+      if (Number(store.currentProjectId) === projectId) {
+        store.setCurrentProjectType(projectType)
+      }
     } catch {
       return null
     }
   }
 
-  const routeEp = parseRouteEpisodeId(route)
-  let episodeId: number
   if (projectType === 'movie') {
-    episodeId =
-      routeEp !== null && routeEp >= 0
-        ? routeEp
-        : store.currentEpisodeId != null && store.currentEpisodeId >= 0
-          ? store.currentEpisodeId
-          : 0
-  } else {
-    const e =
-      routeEp != null && routeEp > 0
-        ? routeEp
-        : store.currentEpisodeId != null && store.currentEpisodeId > 0
-          ? store.currentEpisodeId
-          : null
-    if (e == null || e <= 0) return null
-    episodeId = e
+    // 电影协议固定 episodeId=0，忽略 URL/store 残留的剧集 ID
+    return { projectId, episodeId: 0 }
   }
+
+  const routeEp = parseRouteEpisodeId(route)
+  const storeEp =
+    storeMatchesProject && store.currentEpisodeId != null && store.currentEpisodeId > 0
+      ? store.currentEpisodeId
+      : null
+  const episodeId = routeEp != null && routeEp > 0 ? routeEp : storeEp
+  if (episodeId == null || episodeId <= 0) return null
 
   return { projectId, episodeId }
 }

@@ -9,7 +9,8 @@ import {
   userStoryboardList,
   userStoryboardSetFinalImage,
   userStoryboardGenerateImageWithPrompt,
-  userStoryboardGenerateImage
+  userStoryboardGenerateImage,
+  userTaskDetailCached
 } from '~/utils/businessApi'
 import {
   beginFlowTaskListQuietWindow,
@@ -82,6 +83,10 @@ import {
   isNavigationOrSuspendBatchMessage
 } from '~/utils/taskSseSilentDisconnect'
 import { createAsyncIdleBarrier } from '~/utils/asyncIdleBarrier'
+import {
+  discoverOngoingStoryboardGenerationTasks,
+  discoverOngoingStoryboardModalImageTasks
+} from '~/utils/storyboardGenerationTaskDiscovery'
 
 function parseTaskId(raw: unknown): number | null {
   const n = Number(raw)
@@ -125,9 +130,16 @@ function isStoryboardImagePromptBatchTask(ty: unknown): boolean {
 }
 
 function isOngoingUserTaskStatus(status: unknown): boolean {
-  const s = String(status ?? '').toUpperCase()
+  const s = String(status ?? '')
+    .trim()
+    .toUpperCase()
   return (
-    s === 'PENDING' || s === 'PROCESSING' || s === 'RUNNING' || s === 'QUEUED' || s === 'WAITING'
+    s === 'PENDING' ||
+    s === 'PROCESSING' ||
+    s === 'RUNNING' ||
+    s === 'QUEUED' ||
+    s === 'WAITING' ||
+    s === '0'
   )
 }
 
@@ -692,6 +704,156 @@ export function useStoryboardImageBatchGenerate() {
       return true
     }
     return false
+  }
+
+  function resolveModalImageTaskImageIndex(
+    panel: StoryboardPanel | undefined,
+    task: { sourceRecordId: number | null; referenceImageUrl: string | null }
+  ): number {
+    const images = Array.isArray(panel?.images) ? panel.images : []
+    if (!images.length) return 0
+    if (task.sourceRecordId != null) {
+      const recordIndex = images.findIndex((image) => {
+        const recordId = Number(
+          image?._serverRow?.id ?? image?.genRecordId ?? image?.recordId ??
+            (image?._fromServer ? image?.id : null)
+        )
+        return Number.isFinite(recordId) && recordId === task.sourceRecordId
+      })
+      if (recordIndex >= 0) return recordIndex
+    }
+    const referenceUrl = String(task.referenceImageUrl || '').trim()
+    if (referenceUrl) {
+      const withoutQuery = (raw: unknown) => String(raw || '').trim().split(/[?#]/, 1)[0]
+      const expected = withoutQuery(referenceUrl)
+      const urlIndex = images.findIndex((image) => {
+        const actual = withoutQuery(image?.url ?? image?.thumbnail)
+        return actual === expected || (!!actual && !!expected && actual.endsWith(expected))
+      })
+      if (urlIndex >= 0) return urlIndex
+    }
+    return 0
+  }
+
+  /** Restore every modal task mapping before the list batch flow chooses its SSE owner. */
+  async function reconcileOngoingImageGenerationTasks(
+    tasks: UserTaskRow[],
+    panels: StoryboardPanel[],
+    scopeAtEntry: ReturnType<typeof captureCreationLiveGenScope>
+  ): Promise<void> {
+    const sceneIndexByStoryboardId = new Map<number, number>()
+    panels.forEach((panel, index) => {
+      const storyboardId = parseServerStoryboardId(panel.id)
+      if (storyboardId != null) sceneIndexByStoryboardId.set(storyboardId, index)
+    })
+    if (!sceneIndexByStoryboardId.size) return
+
+    const knownModalTaskIds = new Set<number>()
+    for (const { blob } of resolveCurrentStep4LiveGenScopeBlobs(creationStore, route)) {
+      for (const snapshot of Object.values(blob.storyboardImageGenTasksByStoryboardId || {})) {
+        const taskId = Number(snapshot?.taskId)
+        if (Number.isFinite(taskId) && taskId > 0) knownModalTaskIds.add(taskId)
+      }
+    }
+    for (const task of tasks) {
+      const taskId = Number(task?.id)
+      if (Number.isFinite(taskId) && taskId > 0 && isModalOwnedStoryboardImageTaskId(taskId)) {
+        knownModalTaskIds.add(taskId)
+      }
+    }
+    const knownBatchTaskIds = new Set<number>()
+    const activeBatchTaskId = parseTaskId(
+      creationStore.storyboardImageBatchActiveImageTaskId
+    )
+    if (activeBatchTaskId != null) knownBatchTaskIds.add(activeBatchTaskId)
+
+    const [discovered, modalOnlyTasks] = await Promise.all([
+      discoverOngoingStoryboardGenerationTasks({
+        rows: tasks,
+        media: 'image',
+        loadDetail: (taskId) => userTaskDetailCached(taskId),
+        knownBatchTaskIds,
+        knownModalTaskIds
+      }),
+      discoverOngoingStoryboardModalImageTasks({
+        rows: tasks,
+        loadDetail: (taskId) => userTaskDetailCached(taskId)
+      })
+    ])
+    if (!matchesCreationLiveGenScope(scopeAtEntry)) return
+
+    const visible = discovered
+      .map((task) => ({
+        ...task,
+        storyboardIds: task.storyboardIds.filter((id) => sceneIndexByStoryboardId.has(id))
+      }))
+      .filter((task) => task.storyboardIds.length > 0)
+
+    const restoredStoryboardIds = new Set<number>()
+    for (const task of visible.filter((item) => item.owner === 'modal')) {
+      for (const storyboardId of task.storyboardIds) {
+        if (restoredStoryboardIds.has(storyboardId)) continue
+        restoredStoryboardIds.add(storyboardId)
+        const existing = creationStore.getStoryboardImageGenTask(
+          storyboardId,
+          scopeAtEntry.scopeKey
+        )
+        if (existing && existing.taskId > task.taskId) continue
+        creationStore.setStoryboardImageGenTask(
+          storyboardId,
+          {
+            taskId: task.taskId,
+            sceneIdx: sceneIndexByStoryboardId.get(storyboardId) ?? 0,
+            kind: 'storyboard'
+          },
+          scopeAtEntry.scopeKey
+        )
+      }
+    }
+
+    for (const task of modalOnlyTasks) {
+      const sceneIdx = sceneIndexByStoryboardId.get(task.storyboardId)
+      if (sceneIdx == null) continue
+      const existing = creationStore.getStoryboardImageGenTask(
+        task.storyboardId,
+        scopeAtEntry.scopeKey
+      )
+      if (existing && existing.taskId > task.taskId) continue
+      creationStore.setStoryboardImageGenTask(
+        task.storyboardId,
+        {
+          taskId: task.taskId,
+          sceneIdx,
+          kind: task.kind,
+          imageIdx: resolveModalImageTaskImageIndex(panels[sceneIdx], task)
+        },
+        scopeAtEntry.scopeKey
+      )
+    }
+
+    const activeDescriptor = visible.find((task) => task.taskId === activeBatchTaskId)
+    const batchTasks = visible.filter((task) => task.owner === 'batch')
+    const batchTask =
+      batchTasks.find((task) => task.taskId === activeBatchTaskId) ?? batchTasks[0] ?? null
+
+    if (batchTask) {
+      if (creationStore.storyboardImageBatchActiveImageTaskId !== batchTask.taskId) {
+        syncActiveImageTaskIdToStore(batchTask.taskId)
+      }
+      setImageBatchTargetIds(batchTask.storyboardIds)
+      creationStore.setStoryboardImageBatchGenerating(true)
+      creationStore.setStoryboardImageBatchError(null)
+      for (const storyboardId of batchTask.storyboardIds) {
+        creationStore.setStoryboardPanelImageGenStatus(storyboardId, 'generating')
+      }
+    } else if (
+      activeDescriptor?.owner === 'modal' &&
+      creationStore.storyboardImageBatchActiveTaskId == null
+    ) {
+      syncActiveImageTaskIdToStore(null)
+      creationStore.setStoryboardImageBatchGenerating(false)
+      clearImageBatchTargetIds()
+    }
   }
 
   function getActiveImageBatchTargetIdsLocal(): number[] {
@@ -1704,6 +1866,19 @@ export function useStoryboardImageBatchGenerate() {
         .map((p) => parseServerStoryboardId(p.id))
         .filter((id): id is number => id != null)
 
+      let tasks: UserTaskRow[] = []
+      let taskListOk = true
+      try {
+        tasks = await fetchRecentProjectTasks(ctx.projectId)
+      } catch {
+        taskListOk = false
+      }
+      if (gen !== resumeFollowGeneration) return
+      if (taskListOk) {
+        await reconcileOngoingImageGenerationTasks(tasks, currentPanels, scopeAtEntry)
+        if (gen !== resumeFollowGeneration || !matchesCreationLiveGenScope(scopeAtEntry)) return
+      }
+
       const preferredId = creationStore.storyboardImageBatchActiveTaskId
       const preferredImageIdEarly = creationStore.storyboardImageBatchActiveImageTaskId
       const prefPromptId = parseTaskId(preferredId)
@@ -1724,7 +1899,6 @@ export function useStoryboardImageBatchGenerate() {
       }
 
       let ongoingId: number | null = null
-      let taskListOk = true
 
       if (prefPromptId) {
         let detail = null
@@ -1746,15 +1920,7 @@ export function useStoryboardImageBatchGenerate() {
         }
       }
 
-      let tasks: UserTaskRow[] = []
       if (ongoingId == null) {
-        try {
-          tasks = await fetchRecentProjectTasks(ctx.projectId)
-        } catch {
-          tasks = []
-          taskListOk = false
-        }
-        if (gen !== resumeFollowGeneration) return
         ongoingId = parseTaskId(pickOngoingImagePromptBatchTask(tasks, preferredId)?.id)
       }
 

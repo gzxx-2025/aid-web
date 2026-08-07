@@ -487,24 +487,24 @@ export function useCreateFlowRouteAndSteps(
         ? Number(routeEpRaw)
         : null
     const projectType = deps[3] as UserProjectType | null
+    const storeMatchesProject =
+      Number.isFinite(storePid) && storePid > 0 && storePid === projectId
     let episodeId: number
     if (projectType === 'movie') {
-      episodeId =
-        routeEp !== null
-          ? routeEp
-          : storeEp != null && Number(storeEp) >= 0
-            ? Number(storeEp)
-            : 0
+      // 与 detailByProject / resolveStoryScriptSaveContext 一致：电影固定 0
+      episodeId = 0
     } else if (projectType === 'series') {
       const e =
         routeEp != null && routeEp > 0
           ? routeEp
-          : storeEp != null && Number(storeEp) > 0
+          : storeMatchesProject && storeEp != null && Number(storeEp) > 0
             ? Number(storeEp)
             : null
       if (e == null) return null
       episodeId = e
     } else {
+      // 类型未就绪：切作品窗口期勿用上一作品 episodeId 拼 key，避免误触发带错集 ID 的拉取
+      if (!storeMatchesProject) return null
       const e =
         routeEp != null
           ? routeEp
@@ -1270,7 +1270,7 @@ export function useCreateFlowRouteAndSteps(
               throw publishErr
             }
           }
-          router.push('/works')
+          // 发布至案例广场成功后停留在成品预览，不跳转「我的作品」
           return true
         }
 
@@ -1322,7 +1322,7 @@ export function useCreateFlowRouteAndSteps(
               throw publishErr
             }
           }
-          router.push('/works')
+          // 发布至案例广场成功后停留在成品预览，不跳转「我的作品」
           return true
         }
 

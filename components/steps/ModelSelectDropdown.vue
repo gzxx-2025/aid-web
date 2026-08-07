@@ -73,7 +73,19 @@
                 </div>
                 <CheckCircleFilled v-if="value.id === option.id" class="check-icon" />
               </div>
-              <div v-if="option.desc" class="option-desc">{{ option.desc }}</div>
+              <div v-if="option.desc || option.supportsAudio" class="option-meta-row">
+                <div v-if="option.desc" class="option-desc">{{ option.desc }}</div>
+                <span
+                  v-if="option.supportsAudio"
+                  class="option-capability option-capability--audio"
+                  title="支持音画同步"
+                >
+                  <span class="option-capability__waves" aria-hidden="true">
+                    <i /><i /><i />
+                  </span>
+                  音画同步
+                </span>
+              </div>
               <div v-if="option.prices && option.prices.length > 0" class="option-prices">
                 <span
                   v-for="(price, index) in option.prices"
@@ -110,6 +122,8 @@ export interface ModelOption {
   prices?: Array<{ resolution: string; cost: number }>
   /** POST /api/user/storyboard/generate/media 等仍要求 modelId 时使用 */
   serverModelId?: number
+  /** capability.supportsAudio：是否支持音画同步（音画同出） */
+  supportsAudio?: boolean
 }
 
 interface Props {
@@ -481,12 +495,86 @@ onUnmounted(() => {
   color: var(--home-muted, #8e97a5);
 }
 
+.option-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 8px;
+  margin-bottom: 2px;
+  min-width: 0;
+}
+
 .option-desc {
   font-size: 0.8125rem;
   color: rgba(188, 205, 228, 0.78);
   line-height: 1.55;
-  margin-top: 8px;
-  margin-bottom: 10px;
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.option-capability {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.option-capability--audio {
+  color: #7eefff;
+  background: linear-gradient(
+    135deg,
+    rgba(74, 231, 253, 0.16) 0%,
+    rgba(14, 89, 250, 0.14) 100%
+  );
+  border: 1px solid rgba(74, 231, 253, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.option-capability__waves {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  width: 12px;
+}
+
+.option-capability__waves i {
+  display: block;
+  width: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.option-capability__waves i:nth-child(1) {
+  height: 4px;
+}
+
+.option-capability__waves i:nth-child(2) {
+  height: 9px;
+}
+
+.option-capability__waves i:nth-child(3) {
+  height: 6px;
+}
+
+.option-item.selected .option-capability--audio {
+  color: #a8f4ff;
+  border-color: rgba(74, 231, 253, 0.45);
+  background: linear-gradient(
+    135deg,
+    rgba(74, 231, 253, 0.22) 0%,
+    rgba(14, 89, 250, 0.2) 100%
+  );
 }
 
 .option-prices {
@@ -494,6 +582,7 @@ onUnmounted(() => {
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  margin-top: 8px;
 }
 
 .price-item {

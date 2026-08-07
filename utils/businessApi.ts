@@ -1964,7 +1964,8 @@ export async function userStoryboardUploadVideo(
     episodeId: body.episodeId,
     storyboardId: body.storyboardId,
     imageUrl: String(body.imageUrl || body.videoUrl || ''),
-    mediaType: 'video'
+    mediaType: 'video',
+    videoDuration: body.videoDuration
   })
 }
 

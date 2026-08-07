@@ -205,8 +205,13 @@ import ModalTitleWatermark from '~/components/ModalTitleWatermark.vue'
 import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import AgentPickerModal, { type AgentOption } from '~/components/steps/AgentPickerModal.vue'
 import type { ProjectGenConfigVO, UserModelListItem } from '~/types/business-api'
+import { useCreationStore } from '~/stores/creation'
 import { resolveUserModelProviderLogo } from '~/utils/userModelOption'
-import { agentOptionsFromGenConfigVo, pickFirstAgentOption } from '~/utils/extractAgentBiz'
+import {
+  FORM_IMAGE_AGENT_BIZ_CATEGORY,
+  agentOptionsFromGenConfigVo,
+  pickFirstAgentOption
+} from '~/utils/extractAgentBiz'
 import { fetchProjectGenConfigList, saveProjectGenConfigItems, clearProjectGenConfigCache, buildProjectGenConfigVisibleGroups, resolveProjectGenConfigSceneCode } from '~/utils/projectGenConfig'
 import {
   type ProjectGenConfigSceneKind
@@ -253,6 +258,7 @@ const localOpen = computed({
   set: (v) => emit('update:open', v)
 })
 
+const creationStore = useCreationStore()
 const loading = ref(false)
 const saving = ref(false)
 const activeTabIndex = ref(0)
@@ -649,6 +655,18 @@ async function handleSave() {
   saving.value = true
   try {
     await saveProjectGenConfigItems(pid, configs)
+    // 同步形态图模型到分桶缓存，避免列表自动生成/重新生成仍读到保存前的旧 modelCode
+    const imageCodes: { scene?: string; character?: string; prop?: string } = {}
+    for (const item of configs) {
+      const code = String(item.modelCode || '').trim()
+      if (!code) continue
+      if (item.sceneCode === FORM_IMAGE_AGENT_BIZ_CATEGORY.scene) imageCodes.scene = code
+      else if (item.sceneCode === FORM_IMAGE_AGENT_BIZ_CATEGORY.character) imageCodes.character = code
+      else if (item.sceneCode === FORM_IMAGE_AGENT_BIZ_CATEGORY.prop) imageCodes.prop = code
+    }
+    if (imageCodes.scene || imageCodes.character || imageCodes.prop) {
+      creationStore.updateExtractImageModelCodes(imageCodes)
+    }
     message.success('生成配置已保存')
     emit('saved')
     localOpen.value = false

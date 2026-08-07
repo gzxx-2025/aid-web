@@ -30,24 +30,34 @@ export async function ensureScriptSaveContextForUpload(
     store.currentProjectId ?? (Number.isFinite(routePid) && routePid > 0 ? routePid : null)
   if (!projectId) return null
 
-  let projectType = store.currentProjectType
+  const storePid = Number(store.currentProjectId)
+  const storeMatchesProject =
+    Number.isFinite(storePid) && storePid > 0 && storePid === projectId
+
+  // 切作品窗口期：勿沿用上一作品的 projectType / episodeId
+  let projectType: UserProjectType | null = storeMatchesProject ? store.currentProjectType : null
   if (!projectType) {
     try {
       const detail = await fetchUserProjectDetailOnce(projectId)
       projectType = detail.projectType
-      store.setCurrentProjectType(projectType)
+      if (Number(store.currentProjectId) === projectId) {
+        store.setCurrentProjectType(projectType)
+      }
     } catch {
       return null
     }
   }
 
   if (projectType === 'movie') {
-    const episodeId = store.currentEpisodeId ?? 0
-    return { projectId, episodeId, projectType }
+    return { projectId, episodeId: 0, projectType }
   }
 
   const routeEp = parseRouteEpisodeId(route)
-  const existing = store.currentEpisodeId ?? routeEp
+  const storeEp =
+    storeMatchesProject && store.currentEpisodeId != null && store.currentEpisodeId > 0
+      ? store.currentEpisodeId
+      : null
+  const existing = storeEp ?? routeEp
   if (existing != null && existing > 0) {
     return { projectId, episodeId: existing, projectType }
   }

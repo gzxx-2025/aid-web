@@ -319,8 +319,11 @@ export function mapServerTimelineToUi(timeline: TimelineData | null | undefined)
           recognitionError: sub.recognitionError ?? null
         })
       }
+      // 无逐句 cues 时用整段 text；对口型合成等场景 voice.url 可能为空，仍应挂字幕轨
       if (!cueIndex && text) {
-        const subtitleDuration = Math.min(duration, positiveNum(voice.durationSeconds, duration))
+        const subtitleDuration = voiceUrl
+          ? Math.min(duration, positiveNum(voice.durationSeconds, duration))
+          : duration
         subtitleItems.push({
           id: `sub-${id}`,
           kind: 'subtitle',
@@ -329,7 +332,7 @@ export function mapServerTimelineToUi(timeline: TimelineData | null | undefined)
           fontColor,
           videoClipId: id,
           start: cursor,
-          // 独立配音存在时跟随其真实时长；原生音画视频没有独立配音时覆盖整个视频片段。
+          // 有独立配音时按配音真实时长窗口显示；无配音（含声音已在合成视频内）则铺满分镜时长。
           duration: subtitleDuration,
           show: true,
           sourceMediaFingerprint: sub.sourceMediaFingerprint ?? null,

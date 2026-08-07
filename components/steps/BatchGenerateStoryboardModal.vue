@@ -213,10 +213,10 @@ import {
 } from '~/utils/extractAgentBiz'
 import { STORYBOARD_GEN_CONFIG_SCENE_CODES, getProjectGenConfigBySceneCode } from '~/utils/projectGenConfig'
 import {
-  isProCreationMode,
   resolveBatchStoryboardVideoAgentBizCategories,
   resolveBatchStoryboardVideoModelFuncCodes,
-  shouldPassStoryboardVideoDuration
+  shouldPassStoryboardVideoDuration,
+  skipsStoryboardImageGeneration
 } from '~/utils/creationModeUiRules'
 import { useVideoModelGenerateSettings } from '~/composables/useVideoModelGenerateSettings'
 import { mapUserModelListItemToModelOption } from '~/utils/userModelOption'
@@ -395,9 +395,9 @@ const cardList = computed(() =>
         disabledTooltip = manualStoryboardTooltip('video')
       } else if (
         !hasStoryboardImage &&
-        !isProCreationMode(projectCreationMode.value)
+        !skipsStoryboardImageGeneration(projectCreationMode.value)
       ) {
-        // 专业版不出分镜图，批量出片不要求分镜图
+        // 专业版 / 多参数不出分镜图，批量出片不要求分镜图
         canSelect = false
         disabledTooltip = '需要先生成当前分镜视频对应的分镜图'
       }

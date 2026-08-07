@@ -2116,7 +2116,6 @@ async function runStoryboardImageGenerateForScene(
       result = await runStoryboardImageGenerateTask({
         body: opts.submitBody,
         projectEpisode,
-        notifyGlobalTasks: false,
         onSubmitted: ({ taskId }) => {
           creationStore.setStoryboardImageGenTask(
             storyboardId,
@@ -4257,7 +4256,6 @@ async function runStoryboardDialogueDrawForScene(
     } else if (opts.submitPayload) {
       result = await runStoryboardEditImageTask({
         ...opts.submitPayload,
-        notifyGlobalTasks: false,
         onSubmitted: ({ taskId }) => {
           creationStore.setStoryboardImageGenTask(
             storyboardId,
@@ -4363,7 +4361,6 @@ const handleUpscaleModelSelect = async (payload: {
       genRecordId,
       modelCode,
       resolution: payload.resolution,
-      notifyGlobalTasks: false,
       onSubmitted: ({ taskId }) => {
         creationStore.setStoryboardImageGenTask(
           storyboardId,
@@ -4541,7 +4538,6 @@ const handleMultiAngleGenerate = async (payload: MultiAngleGeneratePayload) => {
       aspectRatio: isNineGrid
         ? nineGridAspectRatio.value || '1:1'
         : generationSettings.value.aspectRatio || '1:1',
-      notifyGlobalTasks: false,
       onSubmitted: ({ taskId }) => {
         creationStore.setStoryboardImageGenTask(
           storyboardId,
