@@ -1136,14 +1136,12 @@ const scriptToolbarOpsItems = computed((): StoryboardOpsMenuItem[] => [
   {
     key: 'auto-script',
     label: scriptAutoGenerateLabel.value,
-    icon: ThunderboltOutlined,
-    onboardingAnchor: 'btn-auto-storyboard'
+    icon: ThunderboltOutlined
   },
   {
     key: 'batch-image',
     label: '批量生成分镜图',
     icon: PictureOutlined,
-    onboardingAnchor: 'sbs-batch-image',
     disabled: panels.value.length === 0 || isGeneratingImageBatch.value || isGenerating.value,
     disabledTooltip:
       panels.value.length === 0 ? '暂无分镜，请先添加或自动生成分镜' : undefined

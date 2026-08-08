@@ -77,7 +77,9 @@ export function buildGlobalSettingFromProjectDetail(
     creationMode: mapProjectCreationMode(detail.defaultCreationMode, base.creationMode),
     style: selectedStyle?.name || detail.videoStyleType || base.style || '',
     selectedStyle: selectedStyle ?? base.selectedStyle ?? null,
-    myStyles: base.myStyles ?? []
+    myStyles: base.myStyles ?? [],
+    styleSelectionTouched: false,
+    styleLocked: detail.styleLocked === true
   }
 }
 

@@ -115,10 +115,17 @@ export interface AuthCryptoPublicConfig {
 
 /** /auth/public-config → basic */
 export interface AuthBasicPublicConfig {
+  /** 网站名称，用于页面标题、品牌文案与 SEO。 */
+  site_name?: string
+  /** 网站描述，用于搜索摘要与分享信息。 */
+  site_description?: string
+  /** 网站关键词，使用英文逗号分隔。 */
+  site_keywords?: string
   record_filing_number?: string
   version_number?: string
   privacy_policy?: string
   terms_of_service?: string
+  membership_agreement?: string
   app_permissions_description?: string
   personal_information_collection_list?: string
   third_party_sdk_and_information_sharing_list?: string
@@ -136,6 +143,12 @@ export interface AuthBasicPublicConfig {
   open_source_git_url?: string
   open_source_gitee_url?: string
   work_publish_enabled?: string
+}
+
+/** /auth/public-config → brand */
+export interface AuthBrandPublicConfig {
+  platformLogoUrl?: string | null
+  faviconUrl?: string | null
 }
 
 /** /auth/public-config → promotion.registerBonus */
@@ -194,6 +207,7 @@ export interface AuthPublicConfigData {
   smsPolicy: AuthCodePolicyConfig
   emailPolicy: AuthCodePolicyConfig
   basic?: AuthBasicPublicConfig
+  brand?: AuthBrandPublicConfig
   crypto?: AuthCryptoPublicConfig
   payment?: AuthPaymentPublicConfig
   upload?: AuthUploadPublicConfig
@@ -417,6 +431,8 @@ export interface UserProjectRow {
   scriptType?: string | null
   videoStyleType?: string | null
   videoStyleValue?: string | null
+  /** 已存在角色/场景/道具资产时为 true，前端不得切换风格 */
+  styleLocked?: boolean | null
   defaultGenMode?: string | null
   defaultStoryboardMode?: string | null
   defaultCreationMode?: string | null
@@ -447,6 +463,10 @@ export interface UserProjectCreateRequest {
   /** 官方风格为 assetName；历史/自定义可为枚举或占位字符串 */
   videoStyleType?: string
   videoStyleValue?: string
+  /** 风格来源，由后端据此读取官方或用户自定义风格并形成项目快照 */
+  styleSource: 'official' | 'custom'
+  /** 风格在对应来源表中的主键 ID */
+  styleAssetId: number
   defaultGenMode?: 'economy' | 'performance'
   defaultStoryboardMode?: 'single' | 'grid'
   defaultCreationMode?: 'i2v' | 'multi' | 'pro' | 'auto_grid'
@@ -506,6 +526,10 @@ export interface UserProjectUpdateRequest {
   scriptType?: 'plot' | 'monologue'
   videoStyleType?: string
   videoStyleValue?: string
+  /** 仅用户主动切换风格时传入 */
+  styleSource?: 'official' | 'custom'
+  /** 仅用户主动切换风格时传入 */
+  styleAssetId?: number
   defaultGenMode?: 'economy' | 'performance'
   defaultStoryboardMode?: 'single' | 'grid'
   defaultCreationMode?: 'i2v' | 'multi' | 'pro' | 'auto_grid'
@@ -879,7 +903,6 @@ export interface UserAssetRpsFormImageRow {
   sourceType?: string | null
   isUse?: number | null
   descriptionIndex?: number | null
-  promptSnapshot?: string | null
   referenceImages?: string[] | null
   /** 是否可拆分四宫格（scene 且未拆过、非拆分产物时为 true） */
   canSplit?: boolean | null
@@ -900,7 +923,6 @@ export interface UserAssetRpsFormImageUpdateRequest {
   name?: string
   imageUrl?: string
   descriptionIndex?: number
-  promptSnapshot?: string
   referenceImages?: string[]
 }
 

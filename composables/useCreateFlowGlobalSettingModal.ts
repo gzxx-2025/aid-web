@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { GlobalSettingData } from '~/types'
+import type { UserProjectUpdateRequest } from '~/types/business-api'
 import { useCreationStore } from '~/stores/creation'
 import { creationStepToRoutePath } from '~/utils/createFlowRoutes'
 import { userProjectUpdate } from '~/utils/businessApi'
@@ -46,13 +47,18 @@ export function useCreateFlowGlobalSettingModal() {
   }
 
   function patchGlobalSettingDraftStyle(
-    patch: Pick<GlobalSettingData, 'selectedStyle' | 'myStyles' | 'style'>
+    patch: Pick<
+      GlobalSettingData,
+      'selectedStyle' | 'myStyles' | 'style' | 'styleSelectionTouched' | 'styleLocked'
+    >
   ) {
     creationGlobalSettingDraft.value = {
       ...creationGlobalSettingDraft.value,
       selectedStyle: patch.selectedStyle,
       myStyles: patch.myStyles,
-      style: patch.style
+      style: patch.style,
+      styleSelectionTouched: patch.styleSelectionTouched,
+      styleLocked: patch.styleLocked
     }
   }
 
@@ -81,26 +87,45 @@ export function useCreateFlowGlobalSettingModal() {
         message.warning('请选择主题风格')
         return
       }
+      if (
+        finalGlobalSetting.styleSelectionTouched === true &&
+        (!videoStylePayload.styleSource || !videoStylePayload.styleAssetId)
+      ) {
+        message.warning('请选择有效风格')
+        return
+      }
       const pid = creationStore.currentProjectId
       if (!pid) {
         message.error('缺少项目信息，无法保存')
         return
       }
 
-      await userProjectUpdate({
+      const updatePayload: UserProjectUpdateRequest = {
         id: pid,
         projectName: finalTitle,
         projectDesc: finalGlobalSetting.description || '',
         aspectRatio: finalGlobalSetting.aspectRatio,
         scriptType: finalGlobalSetting.scriptType,
-        videoStyleType: videoStylePayload.videoStyleType,
-        videoStyleValue: videoStylePayload.videoStyleValue,
         defaultGenMode: finalGlobalSetting.modelStrategy,
         defaultCreationMode: finalGlobalSetting.creationMode
-      })
+      }
+      // 只有用户主动选择了另一风格才通知后端重建快照；普通保存不携带任何风格字段。
+      if (finalGlobalSetting.styleSelectionTouched === true && finalGlobalSetting.styleLocked !== true) {
+        Object.assign(updatePayload, videoStylePayload)
+      }
+
+      const updatedProject = await userProjectUpdate(updatePayload)
+      const savedGlobalSetting: GlobalSettingData = {
+        ...finalGlobalSetting,
+        styleSelectionTouched: false,
+        styleLocked:
+          updatedProject.styleLocked == null
+            ? finalGlobalSetting.styleLocked === true
+            : updatedProject.styleLocked === true
+      }
 
       creationStore.setWorkTitle(finalTitle)
-      creationStore.updateFormData({ globalSetting: finalGlobalSetting })
+      creationStore.updateFormData({ globalSetting: savedGlobalSetting })
       resetProjectDetailHydrateCache()
       showGlobalSettingModal.value = false
       message.success('已保存')

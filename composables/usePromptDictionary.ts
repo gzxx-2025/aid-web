@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { EnumDictGroup, OfficialPromptItem } from '~/types/business-api'
 import { userDictEnumList, userPromptOfficialCategoryList, userPromptOfficialItemList } from '~/utils/businessApi'
+import { resolveProjectStyleReference } from '~/utils/buildProjectVideoStyleFields'
 import type { SettingSelectOption } from '~/components/steps/SettingSelectField.vue'
 
 const NONE: SettingSelectOption = { key: 'none', value: '无', image: '' }
@@ -253,6 +254,10 @@ export type StyleLibraryCard = {
   name: string
   thumbnail: string
   featured: boolean
+  /** 合并资产接口中的原始主键 ID */
+  assetId?: number
+  /** 合并资产接口来源 */
+  sourceFlag?: 'official' | 'custom'
   /** official/query 原始 assetName（与 name 通常一致） */
   assetName?: string
   /** official/query 的 promptText，提交作品时映射为 videoStyleValue */
@@ -281,41 +286,9 @@ export function dedupeStyleLibraryCards(list: StyleLibraryCard[]): StyleLibraryC
   return out
 }
 
-function pickBetterStyleLibraryCard(a: StyleLibraryCard, b: StyleLibraryCard): StyleLibraryCard {
-  const aHasThumb = Boolean(a.thumbnail.trim())
-  const bHasThumb = Boolean(b.thumbnail.trim())
-  if (aHasThumb !== bHasThumb) return aHasThumb ? a : b
-  const aOfficial = a.id.startsWith('OFFICIAL-')
-  const bOfficial = b.id.startsWith('OFFICIAL-')
-  if (aOfficial !== bOfficial) return aOfficial ? a : b
-  return a
-}
-
-/** 同名同提示词的风格仅保留一条：优先有缩略图，其次官方源 */
+/** 兼容旧调用名称；仅按稳定复合 id 去重，禁止跨来源合并同名风格。 */
 export function dedupeStyleLibraryCardsPreferOfficial(list: StyleLibraryCard[]): StyleLibraryCard[] {
-  const byId = dedupeStyleLibraryCards(list)
-  const bestByFingerprint = new Map<string, StyleLibraryCard>()
-  for (const item of byId) {
-    const name = item.name.trim()
-    if (!name) continue
-    const fp = `${name}::${String(item.promptText ?? '').trim()}`
-    const prev = bestByFingerprint.get(fp)
-    bestByFingerprint.set(fp, prev ? pickBetterStyleLibraryCard(prev, item) : item)
-  }
-  const out: StyleLibraryCard[] = []
-  const emittedFp = new Set<string>()
-  for (const item of byId) {
-    const name = item.name.trim()
-    const fp = name ? `${name}::${String(item.promptText ?? '').trim()}` : ''
-    if (fp && bestByFingerprint.has(fp)) {
-      const best = bestByFingerprint.get(fp)!
-      if (best.id !== item.id) continue
-      if (emittedFp.has(fp)) continue
-      emittedFp.add(fp)
-    }
-    out.push(item)
-  }
-  return out
+  return dedupeStyleLibraryCards(list)
 }
 
 /** 将当前选中项移到列表首位（仅按 id 精确匹配，避免同名误排导致底部残留选中视觉） */
@@ -339,13 +312,22 @@ function findStyleCardByStoredId(
 ): StyleLibraryCard | undefined {
   const exact = list.find((s) => s.id === currentId)
   if (exact) return exact
+  const currentReference = resolveProjectStyleReference({ id: currentId })
+  if (currentReference) {
+    return list.find((item) => {
+      const itemReference = resolveProjectStyleReference(item)
+      return itemReference?.styleSource === currentReference.styleSource
+        && itemReference.styleAssetId === currentReference.styleAssetId
+    })
+  }
   if (/^\d+$/.test(currentId)) {
-    return list.find(
+    const legacyMatches = list.filter(
       (s) =>
         s.id === `OFFICIAL-${currentId}` ||
         s.id === `USER-${currentId}` ||
         s.id.endsWith(`-${currentId}`)
     )
+    return legacyMatches.length === 1 ? legacyMatches[0] : undefined
   }
   return undefined
 }
@@ -362,9 +344,9 @@ export function buildStyleCardsFromPromptLib(list: OfficialPromptItem[]): StyleL
 
 /** 精选风格 id 从资产库切到提示词库 id 时，按名称对齐 */
 export function resolveSelectedStyle(
-  current: { id: string; name: string; thumbnail: string; assetName?: string; promptText?: string | null } | null,
+  current: { id: string; name: string; thumbnail: string; assetId?: number; sourceFlag?: 'official' | 'custom'; assetName?: string; promptText?: string | null } | null,
   list: StyleLibraryCard[]
-): { id: string; name: string; thumbnail: string; assetName?: string; promptText?: string | null } | null {
+): { id: string; name: string; thumbnail: string; assetId?: number; sourceFlag?: 'official' | 'custom'; assetName?: string; promptText?: string | null } | null {
   if (!current) return null
   if (!list.length) return current
   const byId = findStyleCardByStoredId(current.id, list)
@@ -373,42 +355,47 @@ export function resolveSelectedStyle(
       id: byId.id,
       name: byId.name,
       thumbnail: byId.thumbnail,
+      ...(byId.assetId != null ? { assetId: byId.assetId } : {}),
+      ...(byId.sourceFlag ? { sourceFlag: byId.sourceFlag } : {}),
       ...(byId.assetName != null && byId.assetName !== '' ? { assetName: byId.assetName } : {}),
       ...(byId.promptText != null ? { promptText: byId.promptText } : {})
     }
   }
-  const nameMatches = list.filter((s) => s.name === current.name)
-  const byName =
-    nameMatches.length === 1
-      ? nameMatches[0]
-      : nameMatches.find((s) => {
-          const promptKey = String(current.promptText ?? '').trim()
-          if (!promptKey) return false
-          return String(s.promptText ?? '').trim() === promptKey
-        }) ?? null
+  // 分页列表尚未加载到目标时，稳定来源+资产 ID 不允许退化成同名匹配到另一条记录。
+  if (resolveProjectStyleReference(current)) return current
+  const promptKey = String(current.promptText ?? '').trim()
+  const nameMatches = list.filter((s) => {
+    if (s.name !== current.name) return false
+    return !promptKey || String(s.promptText ?? '').trim() === promptKey
+  })
+  const byName = nameMatches.length === 1 ? nameMatches[0] : null
   if (byName) {
     return {
       id: byName.id,
       name: byName.name,
       thumbnail: byName.thumbnail,
+      ...(byName.assetId != null ? { assetId: byName.assetId } : {}),
+      ...(byName.sourceFlag ? { sourceFlag: byName.sourceFlag } : {}),
       ...(byName.assetName != null && byName.assetName !== '' ? { assetName: byName.assetName } : {}),
       ...(byName.promptText != null ? { promptText: byName.promptText } : {})
     }
   }
   const assetKey = String(current.assetName ?? current.name ?? '').trim()
-  const promptKey = String(current.promptText ?? '').trim()
   if (assetKey) {
-    const byAsset = list.find((s) => {
+    const assetMatches = list.filter((s) => {
       const nameMatch = s.assetName === assetKey || s.name === assetKey
       if (!nameMatch) return false
       if (!promptKey) return true
       return String(s.promptText ?? '').trim() === promptKey
     })
+    const byAsset = assetMatches.length === 1 ? assetMatches[0] : null
     if (byAsset) {
       return {
         id: byAsset.id,
         name: byAsset.name,
         thumbnail: byAsset.thumbnail,
+        ...(byAsset.assetId != null ? { assetId: byAsset.assetId } : {}),
+        ...(byAsset.sourceFlag ? { sourceFlag: byAsset.sourceFlag } : {}),
         ...(byAsset.assetName != null && byAsset.assetName !== '' ? { assetName: byAsset.assetName } : {}),
         ...(byAsset.promptText != null ? { promptText: byAsset.promptText } : {})
       }

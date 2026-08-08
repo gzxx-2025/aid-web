@@ -40,13 +40,18 @@ function buildHomeShellCreateModal() {
 
     /** 仅更新风格库字段，避免冲掉左侧基本信息草稿 */
     patchGlobalSettingDraftStyle(
-      patch: Pick<GlobalSettingData, 'selectedStyle' | 'myStyles' | 'style'>
+      patch: Pick<
+        GlobalSettingData,
+        'selectedStyle' | 'myStyles' | 'style' | 'styleSelectionTouched' | 'styleLocked'
+      >
     ) {
       this.creationGlobalSettingDraft = {
         ...this.creationGlobalSettingDraft,
         selectedStyle: patch.selectedStyle,
         myStyles: patch.myStyles,
-        style: patch.style
+        style: patch.style,
+        styleSelectionTouched: patch.styleSelectionTouched,
+        styleLocked: patch.styleLocked
       }
     },
 
@@ -68,7 +73,9 @@ function buildHomeShellCreateModal() {
         modelStrategy: d.modelStrategy,
         creationMode: d.creationMode,
         selectedStyle: null,
-        style: ''
+        style: '',
+        styleSelectionTouched: false,
+        styleLocked: false
       }
       if (options?.worksTab) {
         this.syncProjectTypeFromParent = true
@@ -90,6 +97,10 @@ function buildHomeShellCreateModal() {
         message.warning('请选择主题风格')
         return
       }
+      if (!draftStylePayload.styleSource || !draftStylePayload.styleAssetId) {
+        message.warning('请选择有效风格')
+        return
+      }
       this.createConfirmLoading = true
       try {
         const finalTitle = (this.creationTitleDraft || '').trim() || '未命名作品'
@@ -108,17 +119,24 @@ function buildHomeShellCreateModal() {
           projectType: this.creationProjectTypeDraft,
           aspectRatio: finalGlobalSetting.aspectRatio,
           scriptType: finalGlobalSetting.scriptType,
-          videoStyleType: draftStylePayload.videoStyleType,
-          videoStyleValue: draftStylePayload.videoStyleValue,
+          ...draftStylePayload,
+          styleSource: draftStylePayload.styleSource,
+          styleAssetId: draftStylePayload.styleAssetId,
           defaultGenMode: finalGlobalSetting.modelStrategy,
           defaultCreationMode: finalGlobalSetting.creationMode
         }
 
         const createRes = await userProjectCreate(createPayload)
 
+        const savedGlobalSetting: GlobalSettingData = {
+          ...finalGlobalSetting,
+          styleSelectionTouched: false,
+          styleLocked: createRes.data.styleLocked === true
+        }
+
         creationStore.setWorkTitle(finalTitle)
         creationStore.updateFormData({
-          globalSetting: finalGlobalSetting
+          globalSetting: savedGlobalSetting
         })
         creationStore.setCurrentProjectType(this.creationProjectTypeDraft)
         creationStore.setCurrentProjectContext({

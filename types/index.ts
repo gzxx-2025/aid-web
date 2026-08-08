@@ -84,11 +84,19 @@ export interface GlobalSettingData {
     id: string
     name: string
     thumbnail: string
+    /** 合并风格接口的原始数值 ID，仅用于创建/切换项目风格 */
+    assetId?: number
+    /** 合并风格接口来源：official 官方 / custom 用户自定义 */
+    sourceFlag?: 'official' | 'custom'
     /** 与 official/query 的 assetName 一致，提交作品时写入 videoStyleType */
     assetName?: string
     /** 与 official/query 的 promptText 一致，提交作品时写入 videoStyleValue */
     promptText?: string | null
   } | null
+  /** 仅前端草稿使用：用户是否主动选择了另一风格，不随项目请求提交 */
+  styleSelectionTouched?: boolean
+  /** 项目已有角色/场景/道具时由详情接口返回，锁定后仍允许保存其它配置 */
+  styleLocked?: boolean
   // 我的风格库
   myStyles: Array<{
     id: string

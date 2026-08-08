@@ -421,7 +421,9 @@ function onRightPanelModelUpdate(next: GlobalSettingData) {
   emit('update:modelValue', {
     selectedStyle: next.selectedStyle,
     myStyles: next.myStyles,
-    style: next.style
+    style: next.style,
+    styleSelectionTouched: next.styleSelectionTouched,
+    styleLocked: next.styleLocked
   } as GlobalSettingData)
 }
 

@@ -1,5 +1,13 @@
 <template>
-  <div class="global-setting create-step-global-setting">
+  <div
+    ref="styleScrollRootRef"
+    class="global-setting create-step-global-setting"
+    @scroll="onFeaturedStylesScroll"
+  >
+    <!-- <div class="content-header">
+      <p class="step-description-text">{{ description }}</p>
+    </div> -->
+
     <div class="setting-sections">
       <!-- 选择画面比例 -->
       <div v-if="!styleLibraryOnly" class="setting-section">
@@ -77,13 +85,47 @@
 
       <!-- 选择画面风格 -->
       <div class="setting-section">
+        <p v-if="styleLocked" class="style-lock-hint">
+          当前项目已生成角色、场景或道具，风格已锁定；其它项目配置仍可正常保存。
+        </p>
         <!-- 我的风格库 -->
         <div class="my-styles">
           <h4 class="subsection-title title-one">我的风格库</h4>
           <div class="styles-grid">
-            <div class="style-card add-style" @click="openCreateStyleModal">
-              <PlusOutlined class="add-icon" />
-              <span class="add-text">添加风格</span>
+            <div
+              v-if="selectedStyleShortcut"
+              class="style-card active selected-style-shortcut"
+              role="button"
+              tabindex="0"
+              aria-label="定位当前选择的风格"
+              @click="locateSelectedStyle"
+              @keydown.enter.prevent="locateSelectedStyle"
+              @keydown.space.prevent="locateSelectedStyle"
+            >
+              <span class="current-style-badge">当前风格</span>
+              <span class="style-selected-mark style-selected-mark--visible" aria-hidden="true">
+                <img :src="dialogSelectSelIcon" alt="" class="style-selected-mark__icon" />
+              </span>
+              <span class="style-active-ring" aria-hidden="true" />
+
+              <div class="style-thumb">
+                <ShimmerImage
+                  v-if="selectedStyleThumbnail || selectedStyleImageLoading"
+                  :src="selectedStyleThumbnail ? resolveStyleThumbSrc(selectedStyleThumbnail) : ''"
+                  :alt="selectedStyleShortcut.name"
+                  wrapper-class="style-thumb-shimmer"
+                  img-class="style-thumb-img"
+                  object-fit="cover"
+                  reveal-direction="fade"
+                  :min-shimmer-ms="280"
+                />
+                <div v-else class="style-thumb-placeholder">
+                  <img :src="emptyImageIconUrl" alt="" class="empty-image-icon empty-image-icon--md" />
+                </div>
+              </div>
+              <div class="style-overlay">
+                <EllipsisTooltip :title="selectedStyleShortcut.name" />
+              </div>
             </div>
           </div>
         </div>
@@ -100,21 +142,49 @@
             </a>
           </div>
           <p v-if="!stylesLoaded" class="dict-placeholder">加载中…</p>
+          <p v-else-if="styleLoadError" class="dict-placeholder">加载失败，请稍后重试</p>
           <p v-else-if="!mergedStyleList.length" class="dict-placeholder">暂无数据</p>
-          <div v-else class="styles-grid">
+          <TransitionGroup
+            v-if="stylesLoaded"
+            name="style-card-append"
+            tag="div"
+            class="styles-grid"
+            :class="{ 'styles-grid--appending': styleLoadingMore }"
+          >
             <div
-              v-for="(style, styleIndex) in displayedFeaturedStyles"
-              :key="`${style.id}-${styleIndex}`"
+              key="add-style"
+              :class="['style-card', 'add-style', { 'is-style-locked': styleLocked }]"
+              role="button"
+              :tabindex="styleLocked ? -1 : 0"
+              :aria-disabled="styleLocked"
+              :aria-label="styleLocked ? '风格已锁定，无法添加风格' : '添加风格'"
+              @click="openCreateStyleModal"
+              @keydown.enter.prevent="openCreateStyleModal"
+              @keydown.space.prevent="openCreateStyleModal"
+            >
+              <PlusOutlined class="add-icon" />
+              <span class="add-text">添加风格</span>
+            </div>
+            <div
+              v-for="style in displayedFeaturedStyles"
+              :key="style.id"
+              :data-style-card-id="style.id"
               :class="[
                 'style-card',
-                { active: modelValue.selectedStyle?.id === style.id, featured: style.featured }
+                {
+                  active: isCurrentStyle(style),
+                  featured: style.featured,
+                  'is-style-locked': styleLocked && !isCurrentStyle(style),
+                  'style-card--located': locatedStyleId === style.id
+                }
               ]"
+              :aria-disabled="styleLocked && !isCurrentStyle(style)"
               @click="selectStyle(style)"
             >
               <span v-if="style.featured" class="featured-badge">精选</span>
               <span
                 class="style-selected-mark"
-                :class="{ 'style-selected-mark--visible': modelValue.selectedStyle?.id === style.id }"
+                :class="{ 'style-selected-mark--visible': isCurrentStyle(style) }"
                 aria-hidden="true"
               >
                 <img :src="dialogSelectSelIcon" alt="" class="style-selected-mark__icon" />
@@ -138,10 +208,17 @@
                 </div>
               </div>
               <div class="style-overlay">
-                {{ style.name }}
+                <EllipsisTooltip :title="style.name" />
               </div>
             </div>
-          </div>
+          </TransitionGroup>
+          <InfiniteScrollLoadFooter
+            v-if="stylesLoaded && isFeaturedExpanded && mergedStyleList.length"
+            :loading="styleLoadingMore"
+            :has-more="styleHasMore"
+            :has-items="mergedStyleList.length > 0"
+            end-text="已加载全部风格"
+          />
         </div>
       </div>
     </div>
@@ -222,12 +299,11 @@
               placeholder="请输入"
             />
           </a-form-item>
-          <a-form-item label="提示词" class="asset-form-item asset-form-item--full">
+          <a-form-item label="提示词" required class="asset-form-item asset-form-item--full">
             <a-textarea
               v-model:value="styleForm.promptText"
               :rows="4"
-              maxlength="500"
-              placeholder="请输入"
+              placeholder="请输入用于生成画面的风格提示词"
             />
           </a-form-item>
           <a-form-item label="备注" class="asset-form-item asset-form-item--full">
@@ -249,22 +325,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
 import { CheckOutlined, InfoCircleOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import dialogSelectSelIcon from '@/assets/img/icon/dialog-select-sel.svg'
 import { message } from 'ant-design-vue'
 import type { GlobalSettingData } from '~/types'
-import { usePromptDictionary, resolveSelectedStyle, dedupeStyleLibraryCardsPreferOfficial, buildStyleLibraryCardId, type StyleLibraryCard } from '~/composables/usePromptDictionary'
 import {
-  userAssetCustomCreate,
-  userAssetMergedPage
-} from '~/utils/businessApi'
+  usePromptDictionary,
+  resolveSelectedStyle,
+  buildStyleLibraryCardId,
+  type StyleLibraryCard
+} from '~/composables/usePromptDictionary'
+import { resolveProjectStyleReference } from '~/utils/buildProjectVideoStyleFields'
+import { useStyleLibraryMergedPagination } from '~/composables/useStyleLibraryMergedPagination'
+import { userAssetCustomCreate } from '~/utils/businessApi'
 import ModalTitleWatermark from '~/components/ModalTitleWatermark.vue'
+import EllipsisTooltip from '~/components/common/EllipsisTooltip.vue'
+import InfiniteScrollLoadFooter from '~/components/common/InfiniteScrollLoadFooter.vue'
 import ShimmerImage from '~/components/common/ShimmerImage.vue'
 import { emptyImageIconUrl } from '~/utils/emptyImageIcon'
-import { isMergedAssetOfficial } from '~/utils/mergedAssetSource'
 import { uploadImageToOssWithToast } from '~/utils/ossUpload'
 import { buildRetinaDisplayImageUrl } from '~/utils/displayImageUrl'
+import { isSameProjectStyleSelection } from '~/utils/projectStyleSelection'
 
 interface Props {
   modelValue: GlobalSettingData
@@ -281,6 +363,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const styleLibraryOnly = computed(() => props.styleLibraryOnly)
+const styleLocked = computed(() => props.modelValue.styleLocked === true)
 
 const emit = defineEmits<{
   'update:modelValue': [value: GlobalSettingData]
@@ -327,25 +410,170 @@ const modelStrategies = computed(() =>
   }))
 )
 
-const featuredStylesLoaded = ref(false)
-const customStylesLoaded = ref(false)
-const stylesLoaded = computed(() => featuredStylesLoaded.value && customStylesLoaded.value)
-const stylesLoadRevision = ref(0)
-const officialStyles = ref<StyleLibraryCard[]>([])
-const customStyles = ref<StyleLibraryCard[]>([])
+const styleScrollRootRef = ref<HTMLElement | null>(null)
+const {
+  customStyles,
+  officialStyles,
+  mergedStyleList,
+  loading: styleListLoading,
+  loadingMore: styleLoadingMore,
+  initialLoaded: styleInitialLoaded,
+  loadError: styleLoadError,
+  hasMore: styleHasMore,
+  reload: reloadStyleLibrary,
+  loadNextPage: loadNextStylePage,
+  moveCustomStyleToFront,
+  onScrollWhenExpanded
+} = useStyleLibraryMergedPagination(styleScrollRootRef)
 
-const mergedStyleList = computed(() =>
-  dedupeStyleLibraryCardsPreferOfficial([...customStyles.value, ...officialStyles.value])
-)
+const stylesLoaded = computed(() => styleInitialLoaded.value && !styleListLoading.value)
+const stylesLoadRevision = ref(0)
 
 const isFeaturedExpanded = ref(true)
-/** 折叠态：6 列 × 2 行 */
-const FEATURED_COLLAPSED_COUNT = 12
+/** 折叠态保持 6 列 × 2 行；首格由“添加风格”占用。 */
+const FEATURED_COLLAPSED_STYLE_COUNT = 11
 const displayedFeaturedStyles = computed(() =>
   isFeaturedExpanded.value
     ? mergedStyleList.value
-    : mergedStyleList.value.slice(0, FEATURED_COLLAPSED_COUNT)
+    : mergedStyleList.value.slice(0, FEATURED_COLLAPSED_STYLE_COUNT)
 )
+
+type SelectedStyleValue = NonNullable<GlobalSettingData['selectedStyle']>
+
+function findStyleSelectionInLoadedList(
+  selection: SelectedStyleValue
+): StyleLibraryCard | undefined {
+  const resolved = resolveSelectedStyle(selection, mergedStyleList.value)
+  if (!resolved) return undefined
+  return mergedStyleList.value.find((style) => style.id === resolved.id)
+}
+
+const loadedSelectedStyle = computed(() => {
+  const current = props.modelValue.selectedStyle
+  return current ? findStyleSelectionInLoadedList(current) : undefined
+})
+
+const selectedStyleShortcut = computed(() => {
+  const current = props.modelValue.selectedStyle
+  if (!current) return null
+  return loadedSelectedStyle.value ?? current
+})
+
+const selectedStyleImageHydrating = ref(false)
+const selectedStyleImageLoading = computed(() => Boolean(
+  props.modelValue.selectedStyle &&
+  !loadedSelectedStyle.value &&
+  (
+    !stylesLoaded.value ||
+    selectedStyleImageHydrating.value ||
+    (styleHasMore.value && !styleLoadError.value)
+  )
+))
+const selectedStyleThumbnail = computed(() => {
+  const loaded = loadedSelectedStyle.value
+  if (loaded) return String(loaded.thumbnail || '').trim()
+
+  const current = props.modelValue.selectedStyle
+  if (!current) return ''
+  // 项目详情只携带公开风格快照时，thumbnail 可能是项目封面；必须等风格库真实记录补齐。
+  if (!resolveProjectStyleReference(current) && String(current.promptText || '').trim()) return ''
+  return String(current.thumbnail || '').trim()
+})
+
+const locatedStyleId = ref<string | null>(null)
+let locateRequestId = 0
+let selectedStyleLoadRequestId = 0
+let locatedStyleTimer: ReturnType<typeof setTimeout> | null = null
+
+function onFeaturedStylesScroll() {
+  onScrollWhenExpanded(isFeaturedExpanded.value)
+}
+
+function findCurrentStyleInLoadedList(): StyleLibraryCard | undefined {
+  return loadedSelectedStyle.value
+}
+
+async function waitForStylePageIdle(): Promise<void> {
+  if (!styleListLoading.value && !styleLoadingMore.value) return
+  await new Promise<void>((resolve) => {
+    const stop = watch(
+      [styleListLoading, styleLoadingMore],
+      ([loading, loadingMore]) => {
+        if (loading || loadingMore) return
+        stop()
+        resolve()
+      },
+      { flush: 'post' }
+    )
+  })
+}
+
+function scrollStyleCardIntoView(styleId: string): boolean {
+  const root = styleScrollRootRef.value
+  if (!root) return false
+  const card = Array.from(root.querySelectorAll<HTMLElement>('[data-style-card-id]'))
+    .find((element) => element.dataset.styleCardId === styleId)
+  if (!card) return false
+
+  const rootRect = root.getBoundingClientRect()
+  const cardRect = card.getBoundingClientRect()
+  const centeredTop = root.scrollTop + cardRect.top - rootRect.top
+    - (root.clientHeight - cardRect.height) / 2
+  root.scrollTo({ top: Math.max(0, centeredTop), behavior: 'smooth' })
+
+  locatedStyleId.value = styleId
+  if (locatedStyleTimer) clearTimeout(locatedStyleTimer)
+  locatedStyleTimer = setTimeout(() => {
+    if (locatedStyleId.value === styleId) locatedStyleId.value = null
+  }, 2400)
+  return true
+}
+
+/** 当前风格不在首屏时继续读取后续页，用真实风格记录补齐名称、图片和稳定资产身份。 */
+async function ensureCurrentStyleLoaded(): Promise<StyleLibraryCard | undefined> {
+  const selection = props.modelValue.selectedStyle
+  if (!selection) return undefined
+
+  const requestId = ++selectedStyleLoadRequestId
+  selectedStyleImageHydrating.value = true
+  try {
+    await waitForStylePageIdle()
+    if (requestId !== selectedStyleLoadRequestId) return undefined
+
+    let target = findStyleSelectionInLoadedList(selection)
+    while (!target && styleHasMore.value && !styleLoadError.value) {
+      await loadNextStylePage()
+      await waitForStylePageIdle()
+      if (requestId !== selectedStyleLoadRequestId) return undefined
+      target = findStyleSelectionInLoadedList(selection)
+    }
+    return target
+  } finally {
+    if (requestId === selectedStyleLoadRequestId) {
+      selectedStyleImageHydrating.value = false
+    }
+  }
+}
+
+/** 展开精选库；目标尚未加载时继续翻页，加载到后定位同一条真实资产卡片。 */
+async function locateSelectedStyle() {
+  if (!props.modelValue.selectedStyle) return
+  const requestId = ++locateRequestId
+  isFeaturedExpanded.value = true
+  await nextTick()
+  const target = findCurrentStyleInLoadedList() ?? await ensureCurrentStyleLoaded()
+
+  if (requestId !== locateRequestId) return
+  if (!target) {
+    message.warning(styleLoadError.value ? '风格加载失败，请稍后重试' : '未找到当前风格')
+    return
+  }
+
+  await nextTick()
+  if (!scrollStyleCardIntoView(target.id)) {
+    message.warning('未找到当前风格')
+  }
+}
 
 const styleFormOpen = ref(false)
 const creatingStyle = ref(false)
@@ -379,27 +607,61 @@ const selectStyle = (style: {
   id: string
   name: string
   thumbnail: string
+  assetId?: number
+  sourceFlag?: 'official' | 'custom'
   assetName?: string
   promptText?: string | null
 }) => {
+  if (styleLocked.value && !isCurrentStyle(style)) {
+    message.warning('已有资产，无法切换风格')
+    return
+  }
+  if (isCurrentStyle(style)) return
+  selectedStyleLoadRequestId += 1
+  selectedStyleImageHydrating.value = false
   emit('update:modelValue', {
     ...props.modelValue,
     selectedStyle: {
       id: style.id,
       name: style.name,
       thumbnail: style.thumbnail,
+      ...(style.assetId != null ? { assetId: style.assetId } : {}),
+      ...(style.sourceFlag ? { sourceFlag: style.sourceFlag } : {}),
       ...(style.assetName != null && style.assetName !== '' ? { assetName: style.assetName } : {}),
       ...(style.promptText != null ? { promptText: style.promptText } : {})
-    }
+    },
+    style: style.name,
+    styleSelectionTouched: true
   })
+}
+
+function isCurrentStyle(style: Pick<StyleLibraryCard, 'id' | 'assetId' | 'sourceFlag' | 'name' | 'assetName' | 'promptText'>): boolean {
+  const current = props.modelValue.selectedStyle
+  if (!current) return false
+  if (resolveProjectStyleReference(current)) {
+    return isSameProjectStyleSelection(current, style)
+  }
+  // 旧项目缺少稳定来源或资产 ID 时，只允许唯一命中的卡片显示为当前风格。
+  const legacyMatches = mergedStyleList.value.filter((item) =>
+    isSameProjectStyleSelection(current, item)
+  )
+  return legacyMatches.length === 1 && legacyMatches[0]?.id === style.id
 }
 
 // 切换精选风格库显示
 const toggleFeaturedStyles = () => {
   isFeaturedExpanded.value = !isFeaturedExpanded.value
+  if (isFeaturedExpanded.value) {
+    // 展开后内容可能仍贴底，补一次触底检测
+    onScrollWhenExpanded(true)
+  }
 }
 
 function openCreateStyleModal() {
+  if (styleLocked.value) {
+    message.warning('风格已锁定，无法添加风格')
+    return
+  }
   if (creatingStyle.value) return
   styleCoverUploading.value = false
   styleForm.value = {
@@ -455,10 +717,16 @@ async function onStyleCoverFileChange(event: Event) {
 
 function validateStyleForm(): string | null {
   if (!styleForm.value.assetName.trim()) return '请填写资产名称'
+  if (!styleForm.value.promptText.trim()) return '请填写风格提示词'
   return null
 }
 
 async function submitStyleForm() {
+  if (styleLocked.value) {
+    message.warning('风格已锁定，无法添加风格')
+    styleFormOpen.value = false
+    return
+  }
   const errText = validateStyleForm()
   if (errText) {
     message.warning(errText)
@@ -478,20 +746,24 @@ async function submitStyleForm() {
     styleFormOpen.value = false
     message.success('风格添加成功')
 
-    await loadAllStyles(buildStyleLibraryCardId('USER', created.id))
+    await loadAllStyles(buildStyleLibraryCardId('custom', created.id))
 
-    const newStyleId = buildStyleLibraryCardId('USER', created.id)
+    const newStyleId = buildStyleLibraryCardId('custom', created.id)
     const newStyle = customStyles.value.find((s) => s.id === newStyleId)
-    if (newStyle) {
+    if (newStyle && !styleLocked.value) {
       emit('update:modelValue', {
         ...props.modelValue,
         selectedStyle: {
           id: newStyle.id,
           name: newStyle.name,
           thumbnail: newStyle.thumbnail,
+          assetId: newStyle.assetId,
+          sourceFlag: newStyle.sourceFlag,
           assetName: newStyle.assetName,
           promptText: newStyle.promptText
         },
+        style: newStyle.name,
+        styleSelectionTouched: true,
         myStyles: customStyles.value.map((s) => ({
           id: s.id,
           name: s.name,
@@ -539,15 +811,35 @@ watch(
   { flush: 'post' }
 )
 
+watch(
+  customStyles,
+  () => {
+    syncMyStylesFromCustom()
+  },
+  { deep: true }
+)
+
 onMounted(() => {
   void ensureLoaded()
   void loadAllStyles()
 })
 
+onBeforeUnmount(() => {
+  locateRequestId += 1
+  selectedStyleLoadRequestId += 1
+  selectedStyleImageHydrating.value = false
+  if (locatedStyleTimer) clearTimeout(locatedStyleTimer)
+})
+
 async function loadAllStyles(preferredCustomId?: string) {
-  await loadMergedStyles()
+  await reloadStyleLibrary()
+  stylesLoadRevision.value += 1
   if (preferredCustomId) {
     moveCustomStyleToFront(preferredCustomId)
+  }
+  syncMyStylesFromCustom()
+  if (!preferredCustomId && props.modelValue.selectedStyle) {
+    await ensureCurrentStyleLoaded()
   }
   // 新建/未选时默认精选风格库第一项；无精选时回退合并列表第一项
   const first = officialStyles.value[0] ?? mergedStyleList.value[0]
@@ -558,61 +850,13 @@ async function loadAllStyles(preferredCustomId?: string) {
         id: first.id,
         name: first.name,
         thumbnail: first.thumbnail,
+        ...(first.assetId != null ? { assetId: first.assetId } : {}),
+        ...(first.sourceFlag ? { sourceFlag: first.sourceFlag } : {}),
         ...(first.assetName != null && first.assetName !== '' ? { assetName: first.assetName } : {}),
         ...(first.promptText != null ? { promptText: first.promptText } : {})
       }
     })
   }
-}
-
-async function loadMergedStyles() {
-  customStylesLoaded.value = false
-  featuredStylesLoaded.value = false
-  try {
-    const { list } = await userAssetMergedPage({ assetType: 'style', pageNum: 1, pageSize: 200 })
-    const custom: StyleLibraryCard[] = []
-    const official: StyleLibraryCard[] = []
-    const seenIds = new Set<string>()
-    list.forEach((row, index) => {
-      const id = buildStyleLibraryCardId(row.sourceFlag, row.id)
-      if (seenIds.has(id)) return
-      seenIds.add(id)
-      const imageUrl = String(row.imageUrl || '').trim()
-      const isOfficial = isMergedAssetOfficial(row.sourceFlag)
-      // 个人风格无图多为历史项目封面复用同一 OSS 后被删导致的残留，跳过空白卡片
-      if (!isOfficial && !imageUrl) return
-      const card: StyleLibraryCard = {
-        id,
-        name: row.assetName || `风格${index + 1}`,
-        assetName: row.assetName || '',
-        promptText: row.promptText ?? '',
-        thumbnail: imageUrl,
-        featured: false
-      }
-      if (isOfficial) {
-        official.push({ ...card, featured: official.length < 3 })
-      } else {
-        custom.push(card)
-      }
-    })
-    customStyles.value = custom
-    officialStyles.value = official
-    stylesLoadRevision.value += 1
-    syncMyStylesFromCustom()
-  } catch {
-    customStyles.value = []
-    officialStyles.value = []
-  } finally {
-    customStylesLoaded.value = true
-    featuredStylesLoaded.value = true
-  }
-}
-
-function moveCustomStyleToFront(id: string) {
-  const idx = customStyles.value.findIndex((s) => s.id === id)
-  if (idx <= 0) return
-  const item = customStyles.value[idx]!
-  customStyles.value = [item, ...customStyles.value.filter((s) => s.id !== id)]
 }
 </script>
 
@@ -774,6 +1018,17 @@ function moveCustomStyleToFront(id: string) {
   gap: 1.25rem;
 }
 
+.style-lock-hint {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(250, 173, 20, 0.38);
+  border-radius: 6px;
+  color: #ffd666;
+  background: rgba(250, 173, 20, 0.08);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 .style-card {
   aspect-ratio: 1;
   border-radius: 8px;
@@ -796,6 +1051,18 @@ function moveCustomStyleToFront(id: string) {
   transform: translateY(-2px);
 }
 
+.style-card.is-style-locked {
+  cursor: not-allowed;
+  opacity: 0.48;
+  filter: grayscale(0.28);
+}
+
+.style-card.is-style-locked:hover {
+  border-color: rgba(74, 231, 253, 0.2);
+  box-shadow: none;
+  transform: none;
+}
+
 .style-card.active {
   border-color: rgba(74, 231, 253, 0.95);
   transform: translateY(-2px) scale(1.02);
@@ -803,6 +1070,34 @@ function moveCustomStyleToFront(id: string) {
     0 0 0 2px rgba(14, 89, 250, 0.45),
     0 0 18px rgba(74, 231, 253, 0.38),
     0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.selected-style-shortcut {
+  outline: none;
+}
+
+.selected-style-shortcut:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(14, 89, 250, 0.55),
+    0 0 0 4px rgba(74, 231, 253, 0.5),
+    0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.current-style-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 4;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: linear-gradient(270deg, #0e59fa 0%, #00abd8 100%);
+  box-shadow: 0 4px 12px rgba(14, 89, 250, 0.35);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .style-active-ring {
@@ -823,6 +1118,27 @@ function moveCustomStyleToFront(id: string) {
   opacity: 1;
   transform: scale(1);
   animation: style-card-ring-breathe 2.6s ease-in-out infinite;
+}
+
+.style-card--located {
+  animation: style-card-located 0.72s ease-in-out 2;
+}
+
+@keyframes style-card-located {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(14, 89, 250, 0.45),
+      0 0 18px rgba(74, 231, 253, 0.38),
+      0 10px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(74, 231, 253, 0.95),
+      0 0 32px rgba(74, 231, 253, 0.82),
+      0 12px 32px rgba(0, 0, 0, 0.5);
+  }
 }
 
 @keyframes style-card-ring-breathe {
@@ -911,18 +1227,28 @@ function moveCustomStyleToFront(id: string) {
   bottom: 0;
   left: 0;
   right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(18, 18, 18, 0.4);
   width: 100%;
+  height: 28px;
   line-height: 28px;
   padding: 0 6px;
   text-align: center;
   z-index: 2;
+  overflow: hidden;
   color: rgba(255, 255, 255, 0.92);
   font-size: 12px;
   transition:
     background 0.38s cubic-bezier(0.4, 0, 0.2, 1),
     color 0.38s cubic-bezier(0.4, 0, 0.2, 1),
     font-weight 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.style-overlay :deep(.ellipsis-tooltip-text) {
+  width: 100%;
+  text-align: center;
 }
 
 .style-card.active .style-overlay {
@@ -968,6 +1294,11 @@ function moveCustomStyleToFront(id: string) {
 .style-card.add-style:hover {
   border-color: rgba(74, 231, 253, 0.55);
   background: rgba(14, 89, 250, 0.12);
+}
+
+.style-card.add-style.is-style-locked:hover {
+  border-color: rgba(74, 231, 253, 0.2);
+  background: rgba(12, 16, 24, 0.55);
 }
 
 .add-icon {
@@ -1210,6 +1541,22 @@ function moveCustomStyleToFront(id: string) {
   overflow: visible;
 }
 
+/* 上拉加载：新卡片淡入上移，避免生硬跳出 */
+.style-card-append-enter-active {
+  transition:
+    opacity 0.36s ease,
+    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.style-card-append-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+}
+
+.styles-grid--appending {
+  transition: opacity 0.2s ease;
+}
+
 /* 创建项目弹窗右侧：折叠后固定展示 2 行（6 列） */
 .create-step-global-setting .featured-styles--collapsed .styles-grid {
   --featured-style-card-size: calc((100% - 5 * 8px) / 6);
@@ -1221,11 +1568,21 @@ function moveCustomStyleToFront(id: string) {
   .style-selected-mark,
   .style-active-ring,
   .style-overlay,
-  .style-card :deep(.style-thumb-img) {
+  .style-card :deep(.style-thumb-img),
+  .style-card-append-enter-active {
     transition: none !important;
   }
 
+  .style-card-append-enter-from {
+    opacity: 1;
+    transform: none;
+  }
+
   .style-card.active .style-active-ring {
+    animation: none;
+  }
+
+  .style-card--located {
     animation: none;
   }
 

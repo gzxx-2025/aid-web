@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { WorkData, CreationStep } from '~/types'
+import type { WorkData, CreationStep, GlobalSettingData } from '~/types'
 import type { ExtractAgents } from '~/components/steps/ExtractAgentModal.vue'
 import type { UserProjectType } from '~/types/business-api'
 import { plainDeep } from '~/utils/plainDeep'
@@ -1157,7 +1157,9 @@ export const useCreationStore = defineStore('creation', {
         scriptType: 'plot' as const,
         modelStrategy: 'economy' as const,
         creationMode: 'pro' as const,
-        selectedStyle: null as { id: string; name: string; thumbnail: string } | null,
+        selectedStyle: null as GlobalSettingData['selectedStyle'],
+        styleSelectionTouched: false,
+        styleLocked: false,
         myStyles: [] as Array<{ id: string; name: string; thumbnail: string }>
       },
       storyScript: {
@@ -3295,6 +3297,8 @@ export const useCreationStore = defineStore('creation', {
           modelStrategy: 'economy',
           creationMode: 'pro',
           selectedStyle: null,
+          styleSelectionTouched: false,
+          styleLocked: false,
           myStyles: []
         },
         storyScript: {

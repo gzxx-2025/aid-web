@@ -1285,7 +1285,6 @@ const {
   goHomeFromCreate,
   openWorksPanel,
   openAssetsPanel,
-  openTutorial,
   toggleUserMenu,
   openFaq,
   openBilling,

@@ -3238,7 +3238,6 @@ function downloadPreviewVideo() {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-  padding: 0.5rem 0.75rem;
   width: 172px;
   min-width: 172px;
   max-width: 172px;

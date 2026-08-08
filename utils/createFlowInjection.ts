@@ -14,7 +14,12 @@ export interface CreateFlowGlobalSettingContext {
   syncFromStore: () => void
   openModal: () => void
   updateField: <K extends keyof GlobalSettingData>(key: K, value: GlobalSettingData[K]) => void
-  patchStyle: (patch: Pick<GlobalSettingData, 'selectedStyle' | 'myStyles' | 'style'>) => void
+  patchStyle: (
+    patch: Pick<
+      GlobalSettingData,
+      'selectedStyle' | 'myStyles' | 'style' | 'styleSelectionTouched' | 'styleLocked'
+    >
+  ) => void
   save: () => Promise<void>
 }
 

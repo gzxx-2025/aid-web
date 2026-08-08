@@ -40,7 +40,12 @@ const emit = defineEmits<{
   'update:title': [value: string]
   'update:projectType': [value: ProjectTypeValue]
   'update:field': [key: keyof GlobalSettingData, value: GlobalSettingData[keyof GlobalSettingData]]
-  patchStyle: [patch: Pick<GlobalSettingData, 'selectedStyle' | 'myStyles' | 'style'>]
+  patchStyle: [
+    patch: Pick<
+      GlobalSettingData,
+      'selectedStyle' | 'myStyles' | 'style' | 'styleSelectionTouched' | 'styleLocked'
+    >
+  ]
 }>()
 </script>
 
