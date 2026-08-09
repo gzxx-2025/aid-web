@@ -3,7 +3,7 @@ import type { AuthPublicConfigData } from '~/types/business-api'
 import { authPublicConfig } from '~/utils/businessApi'
 import { applyApiCryptoFromPublicConfig } from '~/utils/apiCrypto'
 
-const STORAGE_KEY = 'auth:public-config:v2'
+const STORAGE_KEY = 'auth:public-config:v3'
 
 /** 全局共享，保证各处 Logo / SEO / 开关读到同一份 public-config */
 const sharedConfig = ref<AuthPublicConfigData | null>(null)
@@ -78,6 +78,15 @@ export function useAuthPublicConfig() {
   const cryptoEnabled = computed(() =>
     Boolean(config.value?.crypto?.enabled && config.value?.crypto?.publicKey)
   )
+
+  /** POST /auth/public-config → login.smsEnabled */
+  const smsLoginEnabled = computed(() => config.value?.login?.smsEnabled === true)
+
+  /** POST /auth/public-config → login.emailEnabled */
+  const emailLoginEnabled = computed(() => config.value?.login?.emailEnabled === true)
+
+  /** POST /auth/public-config → login.wechatEnabled */
+  const wechatLoginEnabled = computed(() => config.value?.login?.wechatEnabled === true)
 
   /** POST /auth/public-config → basic.site_name */
   const siteName = computed(() => trimConfigText(config.value?.basic?.site_name))
@@ -198,17 +207,17 @@ export function useAuthPublicConfig() {
     }
   }
 
-  function getCodePolicyByTarget(target: string) {
-    return target.includes('@') ? config.value?.emailPolicy : config.value?.smsPolicy
+  function getCodePolicy(channel: 'sms' | 'email') {
+    return channel === 'email' ? config.value?.emailPolicy : config.value?.smsPolicy
   }
 
-  function getSendCodeIntervalSeconds(target: string): number {
-    const sec = getCodePolicyByTarget(target)?.sendIntervalSeconds
+  function getSendCodeIntervalSeconds(channel: 'sms' | 'email'): number {
+    const sec = getCodePolicy(channel)?.sendIntervalSeconds
     return typeof sec === 'number' && sec > 0 ? sec : 120
   }
 
-  function getCodeMaxLength(target: string): number {
-    const len = getCodePolicyByTarget(target)?.codeLength
+  function getCodeMaxLength(channel: 'sms' | 'email'): number {
+    const len = getCodePolicy(channel)?.codeLength
     return typeof len === 'number' && len > 0 ? len : 6
   }
 
@@ -219,6 +228,9 @@ export function useAuthPublicConfig() {
     captchaEnabled,
     captchaType,
     cryptoEnabled,
+    smsLoginEnabled,
+    emailLoginEnabled,
+    wechatLoginEnabled,
     siteName,
     siteDescription,
     siteKeywords,

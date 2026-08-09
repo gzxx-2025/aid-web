@@ -1,5 +1,5 @@
 /** 与 {@link useAuthPublicConfig} 写入 sessionStorage 的 key 一致 */
-const PUBLIC_CONFIG_STORAGE_KEY = 'auth:public-config:v2'
+const PUBLIC_CONFIG_STORAGE_KEY = 'auth:public-config:v3'
 
 /** sessionStorage 兜底，避免 Nuxt 分包后内存单例不一致 */
 const PENDING_CAPTCHA_TOKEN_KEY = 'auth:pending-captcha-token'

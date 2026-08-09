@@ -147,6 +147,7 @@ import { message } from 'ant-design-vue'
 import { CopyOutlined } from '@ant-design/icons-vue'
 import { userInviteInfo, userInviteUsers } from '~/utils/businessApi'
 import type { InviteInfoVO, InvitedUserVO } from '~/types/business-api'
+import { copyPlainText } from '~/utils/clipboard'
 import { noDataIconUrl } from '~/utils/emptyImageIcon'
 import groupAvtorUrl from '~/assets/img/home/Group-avtor.svg'
 import inviteHeroPicUrl from '~/assets/img/home/pic_yq.svg'
@@ -238,12 +239,12 @@ function loadMoreUsers() {
 }
 
 async function copyText(text: string, okMsg: string) {
-  try {
-    await navigator.clipboard.writeText(text)
+  const copied = await copyPlainText(text)
+  if (copied) {
     message.success(okMsg)
-  } catch {
-    message.error('复制失败，请手动复制')
+    return
   }
+  message.error('复制失败，请手动复制')
 }
 
 function copyInvite() {

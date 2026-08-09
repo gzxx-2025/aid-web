@@ -75,7 +75,9 @@
       <div class="wallet" role="group" aria-label="积分与充值">
         <img :src="starlightCoinUrl" alt="" />
         <span class="points-num">{{ displayPoints }}</span>
-        <button type="button" class="recharge" @click="emit('recharge')">充值</button>
+        <button v-if="anyPaymentEnabled" type="button" class="recharge" @click="emit('recharge')">
+          充值
+        </button>
       </div>
 
       <div v-if="isLoggedIn" class="user">
@@ -117,7 +119,7 @@ import navActiveBg from '~/assets/img/home/Rectangle.svg'
 import { useAuthPublicConfig } from '~/composables/useAuthPublicConfig'
 
 const navActiveBgUrl = `url("${navActiveBg}")`
-const { platformLogoUrl, siteName, loadPublicConfig } = useAuthPublicConfig()
+const { platformLogoUrl, siteName, anyPaymentEnabled, loadPublicConfig } = useAuthPublicConfig()
 const displayLogoUrl = computed(() => platformLogoUrl.value || fallbackLogoUrl)
 const brandAlt = computed(() => siteName.value || 'AID')
 void loadPublicConfig()

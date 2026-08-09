@@ -239,7 +239,7 @@ export async function maybeDecryptApiPayload<T = unknown>(
 export function hydrateApiCryptoFromSessionCache(): void {
   if (!import.meta.client) return
   try {
-    const raw = sessionStorage.getItem('auth:public-config:v2')
+    const raw = sessionStorage.getItem('auth:public-config:v3')
     if (!raw) return
     const parsed = JSON.parse(raw) as { crypto?: AuthCryptoPublicConfig; serverTime?: number }
     applyApiCryptoFromPublicConfig(parsed.crypto, parsed.serverTime)

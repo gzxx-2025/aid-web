@@ -48,20 +48,21 @@
               <div class="login-form-stack">
                 <!-- 绝对定位在 Tab+输入区上方，不占文档流 -->
                 <div id="login-captcha-box" class="login-captcha-box" aria-hidden="true" />
-                <div class="form-tabs">
+                <div class="form-tabs" :class="{ 'is-single': !codeLoginPresentation.enabled }">
                   <button
+                    v-if="codeLoginPresentation.enabled"
                     type="button"
                     class="form-tab"
                     :class="{ active: activeFormTab === 'code' }"
-                    @click="activeFormTab = 'code'"
+                    @click="selectFormTab('code')"
                   >
-                    手机/邮箱
+                    {{ codeLoginPresentation.tabLabel }}
                   </button>
                   <button
                     type="button"
                     class="form-tab"
                     :class="{ active: activeFormTab === 'password' }"
-                    @click="activeFormTab = 'password'"
+                    @click="selectFormTab('password')"
                   >
                     账号密码
                   </button>
@@ -69,12 +70,12 @@
               </div>
               <a-form-item
                 name="account"
-                :rules="[{ required: true, message: '请输入手机号或邮箱' }]"
+                :rules="[{ required: true, message: accountRequiredMessage }]"
               >
                 <a-input
                   v-model:value="quickLoginForm.account"
                   size="large"
-                  placeholder="请输入手机号或邮箱"
+                  :placeholder="accountPlaceholder"
                   class="login-input"
                   autocomplete="off"
                   name="login-account"
@@ -156,7 +157,11 @@
                   </template>
                 </a-input-password>
               </a-form-item>
-              <a-form-item name="inviteCode" class="invite-code-item">
+              <a-form-item
+                v-if="activeFormTab === 'code'"
+                name="inviteCode"
+                class="invite-code-item"
+              >
                 <a-input
                   v-model:value="quickLoginForm.inviteCode"
                   size="large"
@@ -193,7 +198,7 @@
                       class="agreement-link"
                       @click.stop
                       >《隐私政策》</a
-                    ><span v-else>《隐私政策》</span>，未注册的手机号将自动创建账号
+                    ><span v-else>《隐私政策》</span>{{ registrationHint }}
                   </span>
                 </a-checkbox>
               </a-form-item>
@@ -207,7 +212,7 @@
                   :loading="loading || captchaOpening"
                   :disabled="captchaOpening"
                 >
-                  登录/注册
+                  {{ activeFormTab === 'code' ? '登录/注册' : '登录' }}
                 </a-button>
               </a-form-item>
             </a-form>
@@ -216,77 +221,92 @@
       </section>
 
       <section class="wechat-section">
-        <p class="wechat-title">微信扫码登录</p>
-        <div
-          class="wechat-qr-wrap"
-          :class="{
-            'is-loading': !wechatQrUrl,
-            'is-expired': wechatQrExpired,
-            'is-scanned': wechatStatus === 'SCANNED'
-          }"
-        >
-          <img v-if="wechatQrUrl" :src="wechatQrUrl" alt="微信登录二维码" class="wechat-qr" />
-          <div v-else class="wechat-loading">
-            <div class="qr-loading-ring">
-              <div class="qr-loading-spinner" />
-              <div class="qr-loading-inner">
-                <div class="qr-loading-mini-qr">
-                  <div class="mini-square top-left" />
-                  <div class="mini-square top-right" />
-                  <div class="mini-square bottom-left" />
-                  <div class="mini-square bottom-right" />
+        <template v-if="wechatLoginPresentation.enabled">
+          <p class="wechat-title">{{ wechatLoginPresentation.title }}</p>
+          <div
+            class="wechat-qr-wrap"
+            :class="{
+              'is-loading': !wechatQrUrl,
+              'is-expired': wechatQrExpired,
+              'is-scanned': wechatStatus === 'SCANNED'
+            }"
+          >
+            <img v-if="wechatQrUrl" :src="wechatQrUrl" alt="微信登录二维码" class="wechat-qr" />
+            <div v-else class="wechat-loading">
+              <div class="qr-loading-ring">
+                <div class="qr-loading-spinner" />
+                <div class="qr-loading-inner">
+                  <div class="qr-loading-mini-qr">
+                    <div class="mini-square top-left" />
+                    <div class="mini-square top-right" />
+                    <div class="mini-square bottom-left" />
+                    <div class="mini-square bottom-right" />
+                  </div>
                 </div>
               </div>
+              <div class="qr-loading-text">正在获取二维码…</div>
+              <div class="qr-loading-subtext">{{ wechatLoginPresentation.description }}</div>
             </div>
-            <div class="qr-loading-text">正在获取二维码…</div>
-            <div class="qr-loading-subtext">请在微信中扫描登录</div>
+            <div v-if="wechatStatus === 'SCANNED'" class="wechat-scanned-overlay">
+              <span class="wechat-status-spinner" aria-hidden="true" />
+              <span>已扫码，登录处理中</span>
+            </div>
+            <button
+              v-if="wechatQrUrl"
+              type="button"
+              class="wechat-qr-refresh-overlay"
+              :disabled="wechatLoading || wechatStatus === 'SCANNED' || wechatStatus === 'SUCCESS'"
+              :aria-busy="wechatLoading"
+              @click="openWechatLogin"
+            >
+              <span class="wechat-qr-refresh-overlay__text">{{
+                wechatLoading
+                  ? '刷新中...'
+                  : wechatStatus === 'FAIL'
+                    ? '登录失败，点击刷新'
+                    : wechatQrExpired
+                      ? '二维码已过期，点击刷新'
+                      : '刷新二维码'
+              }}</span>
+            </button>
           </div>
-          <div v-if="wechatStatus === 'SCANNED'" class="wechat-scanned-overlay">
-            <span class="wechat-status-spinner" aria-hidden="true" />
-            <span>已扫码，登录处理中</span>
+          <div
+            v-if="showWechatBottomStatus"
+            class="wechat-status"
+            :class="`is-${wechatStatus.toLowerCase()}`"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="wechat-status__indicator" aria-hidden="true">
+              <span
+                v-if="wechatStatus === 'LOADING' || wechatStatus === 'SCANNED'"
+                class="wechat-status-spinner"
+              />
+            </span>
+            <span class="wechat-status__text">{{ wechatStatusText }}</span>
+            <button
+              v-if="wechatStatus === 'EXPIRED' || wechatStatus === 'FAIL'"
+              class="wechat-status__retry"
+              type="button"
+              @click="openWechatLogin"
+            >
+              重新获取
+            </button>
           </div>
-          <button
-            v-if="wechatQrUrl"
-            type="button"
-            class="wechat-qr-refresh-overlay"
-            :disabled="wechatLoading || wechatStatus === 'SCANNED' || wechatStatus === 'SUCCESS'"
-            :aria-busy="wechatLoading"
-            @click="openWechatLogin"
-          >
-            <span class="wechat-qr-refresh-overlay__text">{{
-              wechatLoading
-                ? '刷新中...'
-                : wechatStatus === 'FAIL'
-                  ? '登录失败，点击刷新'
-                  : wechatQrExpired
-                    ? '二维码已过期，点击刷新'
-                    : '刷新二维码'
-            }}</span>
-          </button>
-        </div>
-        <div
-          v-if="showWechatBottomStatus"
-          class="wechat-status"
-          :class="`is-${wechatStatus.toLowerCase()}`"
-          role="status"
-          aria-live="polite"
-        >
-          <span class="wechat-status__indicator" aria-hidden="true">
-            <span
-              v-if="wechatStatus === 'LOADING' || wechatStatus === 'SCANNED'"
-              class="wechat-status-spinner"
-            />
-          </span>
-          <span class="wechat-status__text">{{ wechatStatusText }}</span>
-          <button
-            v-if="wechatStatus === 'EXPIRED' || wechatStatus === 'FAIL'"
-            class="wechat-status__retry"
-            type="button"
-            @click="openWechatLogin"
-          >
-            重新获取
-          </button>
-        </div>
+        </template>
+        <template v-else>
+          <p class="wechat-title">{{ wechatLoginPresentation.title }}</p>
+          <div class="wechat-disabled" role="status" aria-live="polite">
+            <div class="wechat-disabled__icon" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+            <p class="wechat-disabled__title">扫码登录暂未开启</p>
+            <p class="wechat-disabled__description">{{ wechatLoginPresentation.description }}</p>
+          </div>
+        </template>
       </section>
     </main>
 
@@ -313,6 +333,13 @@ import { useTacPageHead } from '~/composables/useTacPageHead'
 import { authLogin, authSendCode, wechatLoginCheck, wechatLoginQrcode } from '~/utils/businessApi'
 import { setAuthLoginChannel, type AuthLoginChannel } from '~/utils/authLoginChannel'
 import { normalizeInviteCode, withLoginInviteCode } from '~/utils/authLoginInvite'
+import {
+  getCodeLoginPresentation,
+  getWechatLoginPresentation,
+  isValidCodeLoginTarget,
+  resolveCodeLoginChannel,
+  type CodeLoginChannel
+} from '~/utils/authLoginMethods'
 import { clearPendingCaptchaToken, setPendingCaptchaToken } from '~/utils/captchaToken'
 import { mapLoginDataToUser } from '~/utils/userProfile'
 import fallbackLogoUrl from '~/assets/img/home/logo.svg'
@@ -342,6 +369,9 @@ const route = useRoute()
 const {
   captchaEnabled,
   captchaType,
+  smsLoginEnabled,
+  emailLoginEnabled,
+  wechatLoginEnabled,
   recordFilingNumber,
   termsOfServiceUrl,
   privacyPolicyUrl,
@@ -390,10 +420,34 @@ const {
   restore: restoreQuickSendCodeCountdown,
   stop: stopQuickSendCodeCountdown
 } = usePersistedCountdown(LOGIN_SEND_CODE_COUNTDOWN_SCOPE)
-const activeFormTab = ref<'code' | 'password'>('code')
+const codeLoginPresentation = computed(() =>
+  getCodeLoginPresentation(smsLoginEnabled.value, emailLoginEnabled.value)
+)
+const wechatLoginPresentation = computed(() => getWechatLoginPresentation(wechatLoginEnabled.value))
+const activeFormTab = ref<'code' | 'password'>(
+  codeLoginPresentation.value.enabled ? 'code' : 'password'
+)
+const formTabSelectedByUser = ref(false)
+const accountPlaceholder = computed(() =>
+  activeFormTab.value === 'password' ? '请输入账号' : codeLoginPresentation.value.accountPlaceholder
+)
+const accountRequiredMessage = computed(() =>
+  activeFormTab.value === 'password'
+    ? '请输入账号'
+    : `请输入${codeLoginPresentation.value.accountLabel}`
+)
+const registrationHint = computed(() =>
+  activeFormTab.value === 'code' ? codeLoginPresentation.value.registrationHint : ''
+)
 const accountIcon = computed(() =>
   activeFormTab.value === 'password' ? peopleIconUrl : numberIconUrl
 )
+
+function selectFormTab(tab: 'code' | 'password') {
+  if (tab === 'code' && !codeLoginPresentation.value.enabled) return
+  formTabSelectedByUser.value = true
+  activeFormTab.value = tab
+}
 
 /** 阻止浏览器自动填充：初始 readonly，聚焦/点击后解除 */
 function clearLoginInputReadonly(e: FocusEvent | MouseEvent | TouchEvent) {
@@ -410,17 +464,23 @@ function clearLoginInputReadonly(e: FocusEvent | MouseEvent | TouchEvent) {
   }
 }
 
-const loginCodeMaxLength = computed(() => {
-  const account = quickLoginForm.account.trim()
-  if (!account) return 6
-  return getCodeMaxLength(account)
-})
 const quickLoginForm = reactive({
   account: '',
   code: '',
   password: '',
   inviteCode: '',
   agreement: false
+})
+const activeCodeLoginChannel = computed<CodeLoginChannel | null>(() =>
+  resolveCodeLoginChannel(
+    quickLoginForm.account.trim(),
+    smsLoginEnabled.value,
+    emailLoginEnabled.value
+  )
+)
+const loginCodeMaxLength = computed(() => {
+  const channel = activeCodeLoginChannel.value
+  return channel ? getCodeMaxLength(channel) : 6
 })
 
 /** 当前微信扫码会话已绑定的邀请码（用于变更后重新拉码） */
@@ -580,11 +640,11 @@ function applyWechatCheckPayload(payload: WechatCheckPayload) {
 }
 
 function canRunWechatPolling() {
-  return true
+  return wechatLoginEnabled.value
 }
 
 async function openWechatLogin() {
-  if (!canRunWechatPolling()) return
+  if (!canRunWechatPolling() || wechatLoading.value) return
   wechatLoading.value = true
   setWechatStatus('LOADING', '正在获取二维码')
   wechatQrExpired.value = false
@@ -677,23 +737,28 @@ async function withCaptchaToken<T>(
 
 async function doSendQuickLoginCode(captchaToken: string) {
   const account = quickLoginForm.account.trim()
+  const channel = activeCodeLoginChannel.value
+  if (!channel) throw new Error('验证码登录未开启')
+  if (!isValidCodeLoginTarget(account, channel)) {
+    throw new Error(channel === 'sms' ? '手机号格式不正确' : '邮箱格式不正确')
+  }
   await authSendCode(
     {
       target: account,
-      codeType: inferCodeTypeByTarget(account),
+      codeType: channel,
       scene: 'login',
       inviteCode: normalizedInviteCode()
     },
     captchaToken || undefined
   )
   message.success('验证码已发送')
-  startQuickSendCodeCountdown(account, getSendCodeIntervalSeconds(account))
+  startQuickSendCodeCountdown(account, getSendCodeIntervalSeconds(channel))
 }
 
 async function handleSendQuickLoginCode() {
   const account = quickLoginForm.account.trim()
   if (!account) {
-    message.warning('请先输入手机号或邮箱')
+    message.warning(accountPlaceholder.value)
     return
   }
   if (quickSendCodeLoading.value || quickSendCodeCountdown.value > 0 || captchaOpening.value) return
@@ -708,16 +773,13 @@ async function handleSendQuickLoginCode() {
   }
 }
 
-async function doPasswordLogin(captchaToken: string, inviteCode?: string) {
+async function doPasswordLogin(captchaToken: string) {
   const data = await authLogin(
-    withLoginInviteCode(
-      {
-        loginType: 'password',
-        account: quickLoginForm.account.trim(),
-        password: quickLoginForm.password
-      },
-      inviteCode ?? normalizedInviteCode()
-    ),
+    {
+      loginType: 'password',
+      account: quickLoginForm.account.trim(),
+      password: quickLoginForm.password
+    },
     captchaToken || undefined
   )
   completeLogin(data, 'password')
@@ -725,7 +787,11 @@ async function doPasswordLogin(captchaToken: string, inviteCode?: string) {
 
 async function doCodeLogin(inviteCode?: string) {
   // 短信/邮箱登录：人机校验仅在「获取验证码」时完成（见接口文档业务流程），登录不再携带 captcha-token
-  const loginType = inferLoginTypeByTarget(quickLoginForm.account.trim())
+  const loginType = activeCodeLoginChannel.value
+  if (!loginType) throw new Error('验证码登录未开启')
+  if (!isValidCodeLoginTarget(quickLoginForm.account, loginType)) {
+    throw new Error(loginType === 'sms' ? '手机号格式不正确' : '邮箱格式不正确')
+  }
   const data = await authLogin(
     withLoginInviteCode(
       {
@@ -746,7 +812,10 @@ const handleFinish = async (values?: Partial<typeof quickLoginForm>) => {
   }
   if (loading.value || captchaOpening.value) return
   // 优先用 Form @finish 回传值，避免输入框展示值与 model 不同步时漏传邀请码
-  const inviteCode = normalizeInviteCode(values?.inviteCode) ?? normalizedInviteCode()
+  const inviteCode =
+    activeFormTab.value === 'code'
+      ? (normalizeInviteCode(values?.inviteCode) ?? normalizedInviteCode())
+      : undefined
   if (inviteCode && quickLoginForm.inviteCode.trim() !== inviteCode) {
     quickLoginForm.inviteCode = inviteCode
   }
@@ -756,7 +825,7 @@ const handleFinish = async (values?: Partial<typeof quickLoginForm>) => {
       await doCodeLogin(inviteCode)
       return
     }
-    const loggedIn = await withCaptchaToken((token) => doPasswordLogin(token, inviteCode))
+    const loggedIn = await withCaptchaToken(doPasswordLogin)
     if (loggedIn === null && captchaEnabled.value) return
   } catch (e: any) {
     message.error(e?.msg ?? e?.message ?? '登录失败')
@@ -765,31 +834,38 @@ const handleFinish = async (values?: Partial<typeof quickLoginForm>) => {
   }
 }
 
-function inferCodeTypeByTarget(target: string): 'sms' | 'email' {
-  return target.includes('@') ? 'email' : 'sms'
-}
-
-function inferLoginTypeByTarget(target: string): 'sms' | 'email' {
-  return target.includes('@') ? 'email' : 'sms'
-}
-
 const loginBgVideoRef = ref<HTMLVideoElement | null>(null)
 
-onMounted(() => {
-  loadPublicConfig()
+onMounted(async () => {
   const routeInvite = String(route.query.invite || route.query.inviteCode || '').trim()
   if (routeInvite) {
     quickLoginForm.inviteCode = routeInvite
   }
-  void openWechatLogin().finally(() => {
-    loginPageReady.value = true
-  })
+  await loadPublicConfig()
+  if (!formTabSelectedByUser.value) {
+    activeFormTab.value = codeLoginPresentation.value.enabled ? 'code' : 'password'
+  } else if (!codeLoginPresentation.value.enabled && activeFormTab.value === 'code') {
+    activeFormTab.value = 'password'
+  }
+  loginPageReady.value = true
+  if (wechatLoginEnabled.value) void openWechatLogin()
   restoreQuickSendCodeCountdown(quickLoginForm.account.trim())
   const v = loginBgVideoRef.value
   if (v) {
     v.muted = true
     v.play().catch(() => {})
   }
+})
+
+watch(wechatLoginEnabled, (enabled) => {
+  if (!loginPageReady.value) return
+  if (enabled) {
+    void openWechatLogin()
+    return
+  }
+  stopWechatPoll()
+  clearWechatExpireTimer()
+  wechatQrUrl.value = ''
 })
 
 watch(
@@ -921,6 +997,10 @@ watch(
   width: min(38%, 220px);
   min-width: 180px;
   flex-shrink: 0;
+}
+
+.form-tabs.is-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .form-tab {
@@ -1114,6 +1194,58 @@ watch(
   color: #fff;
   font-size: 18px;
   font-weight: 600;
+}
+
+.wechat-disabled {
+  width: 270px;
+  height: 270px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.34);
+  text-align: center;
+}
+
+.wechat-disabled__icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  grid-template-columns: repeat(2, 14px);
+  grid-template-rows: repeat(2, 14px);
+  place-content: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(74, 231, 253, 0.24);
+  border-radius: 12px;
+  color: #4ae7fd;
+  background: rgba(74, 231, 253, 0.06);
+}
+
+.wechat-disabled__icon span {
+  display: block;
+  border: 2px solid currentcolor;
+  border-radius: 3px;
+  opacity: 0.72;
+}
+
+.wechat-disabled__title {
+  margin: 0;
+  color: rgba(241, 245, 249, 0.92);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.wechat-disabled__description {
+  margin: 8px 0 0;
+  color: rgba(148, 163, 184, 0.86);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .wechat-qr-wrap {
@@ -1644,6 +1776,12 @@ watch(
   .wechat-qr-wrap {
     width: 220px;
     height: 220px;
+  }
+
+  .wechat-disabled {
+    width: 220px;
+    height: 220px;
+    padding: 24px;
   }
 
   .wechat-status {

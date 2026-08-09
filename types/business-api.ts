@@ -106,6 +106,13 @@ export interface AuthCodePolicyConfig {
   dailyLimit: number
 }
 
+/** /auth/public-config → login */
+export interface AuthLoginPublicConfig {
+  smsEnabled: boolean
+  emailEnabled: boolean
+  wechatEnabled: boolean
+}
+
 /** /auth/public-config → crypto */
 export interface AuthCryptoPublicConfig {
   enabled: boolean
@@ -206,6 +213,7 @@ export interface AuthPublicConfigData {
   captcha: AuthCaptchaPublicConfig
   smsPolicy: AuthCodePolicyConfig
   emailPolicy: AuthCodePolicyConfig
+  login?: AuthLoginPublicConfig
   basic?: AuthBasicPublicConfig
   brand?: AuthBrandPublicConfig
   crypto?: AuthCryptoPublicConfig
