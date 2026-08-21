@@ -1,27 +1,27 @@
-import { userProjectGenConfigGet, userProjectGenConfigSave } from '~/utils/businessApi'
 import type {
-  AssetExtractType,
-  ProjectGenConfigSaveItem,
-  ProjectGenConfigVO,
-  UserModelListItem
+AssetExtractType,
+ProjectGenConfigSaveItem,
+ProjectGenConfigVO,
+UserModelListItem
 } from '~/types/business-api'
-import type { AgentOption } from '~/components/steps/AgentPickerModal.vue'
+import type { AgentOption } from '~/types/modelAgentOptions'
+import { userProjectGenConfigGet,userProjectGenConfigSave } from '~/utils/businessApi'
 import {
-  EXTRACT_PARALLEL_AGENT_BIZ_CATEGORY,
-  FORM_GENERATE_AGENT_BIZ_CATEGORY,
-  FORM_IMAGE_AGENT_BIZ_CATEGORY,
-  STORYBOARD_SCRIPT_AGENT_BIZ_CATEGORY,
-  STORYBOARD_STYLIST_MODEL_FUNC_CODE,
-  STORYBOARD_VIDEO_PROMPT_AGENT_BIZ_CATEGORY,
-  STORYBOARD_VIDEO_PROMPT_IMAGE_AGENT_BIZ_CATEGORY,
-  STORYBOARD_IMAGE_AGENT_BIZ_CATEGORY,
-  CHARACTER_CARD_IMAGE_AGENT_BIZ_CATEGORY,
-  agentOptionsFromGenConfigVo,
-  pickFirstAgentOption
+CHARACTER_CARD_IMAGE_AGENT_BIZ_CATEGORY,
+EXTRACT_PARALLEL_AGENT_BIZ_CATEGORY,
+FORM_GENERATE_AGENT_BIZ_CATEGORY,
+FORM_IMAGE_AGENT_BIZ_CATEGORY,
+STORYBOARD_IMAGE_AGENT_BIZ_CATEGORY,
+STORYBOARD_SCRIPT_AGENT_BIZ_CATEGORY,
+STORYBOARD_STYLIST_MODEL_FUNC_CODE,
+STORYBOARD_VIDEO_PROMPT_AGENT_BIZ_CATEGORY,
+STORYBOARD_VIDEO_PROMPT_IMAGE_AGENT_BIZ_CATEGORY,
+agentOptionsFromGenConfigVo,
+pickFirstAgentOption
 } from '~/utils/extractAgentBiz'
 import {
-  PROJECT_GEN_CONFIG_SCENE_GROUPS,
-  type ProjectGenConfigSceneGroup
+PROJECT_GEN_CONFIG_SCENE_GROUPS,
+type ProjectGenConfigSceneGroup
 } from '~/utils/projectGenConfigScenes'
 
 export const STORYBOARD_GEN_CONFIG_SCENE_CODES = {

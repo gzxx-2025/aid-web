@@ -1,8 +1,8 @@
 import {
-  isComposeStoryboardVideoRecord,
-  isOriginalStoryboardVideoRecord,
-  normalizeStoryboardRecordGenType
-} from './storyboardRecordRow.ts'
+isComposeStoryboardVideoRecord,
+isOriginalStoryboardVideoRecord,
+normalizeStoryboardRecordGenType
+} from './storyboardRecordRow'
 
 export type StoryboardVideoPick = {
   id: string

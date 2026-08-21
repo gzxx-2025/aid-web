@@ -142,7 +142,7 @@ export interface StoryboardPanel {
   scriptContent?: string
   /** 工作台 `dialogueText`，同步到配音步骤 `dialogue` */
   dialogueText?: string | null
-  /** 列表接口 `subtitleText`，成品预览字幕轨优先使用 */
+  /** 列表接口 `subtitleText`，成品预览字幕轨唯一来源（勿用 dialogueText 兜底） */
   subtitleText?: string | null
   /** 列表/详情 `voiceType`：narration / dialogue / mixed */
   voiceType?: string | null
@@ -185,7 +185,7 @@ export interface DubbingPanel {
   title: string
   /** 台词（工作台 dialogueText 原文，编辑用） */
   dialogue?: string
-  /** 字幕展示文本（列表 subtitleText）；成品预览字幕轨优先用本字段 */
+  /** 字幕展示文本（列表 subtitleText）；成品预览字幕轨唯一来源 */
   subtitleText?: string | null
   /** 配音类型：旁白/画外音 等 */
   dubbingType?: string

@@ -1,6 +1,5 @@
-import type { EnumDictGroup } from '~/types/business-api'
 import type { GlobalSettingData } from '~/types'
-
+import type { EnumDictGroup } from '~/types/business-api'
 export type GlobalSettingScriptType = GlobalSettingData['scriptType']
 export type GlobalSettingCreationMode = GlobalSettingData['creationMode']
 export type GlobalSettingModelStrategy = GlobalSettingData['modelStrategy']

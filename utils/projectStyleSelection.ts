@@ -1,6 +1,5 @@
 import type { ProjectStyleSelection } from '~/utils/buildProjectVideoStyleFields'
 import { resolveProjectStyleReference } from '~/utils/buildProjectVideoStyleFields'
-
 type ComparableStyle = Pick<
   ProjectStyleSelection,
   'id' | 'name' | 'assetId' | 'sourceFlag' | 'assetName' | 'promptText'

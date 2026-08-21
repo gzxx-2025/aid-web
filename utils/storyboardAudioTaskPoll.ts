@@ -1,18 +1,17 @@
 import type {
-  StoryboardAudioTaskVO,
-  StoryboardGenerateAudioRequest,
-  StoryboardLipSyncAcceptVO,
-  StoryboardLipSyncRequest
+StoryboardAudioTaskVO,
+StoryboardGenerateAudioRequest,
+StoryboardLipSyncAcceptVO,
+StoryboardLipSyncRequest
 } from '~/types/business-api'
 import {
-  userModelList,
-  userStoryboardAudioTask,
-  userStoryboardGenerateAudio,
-  userStoryboardLipSync
+userModelList,
+userStoryboardAudioTask,
+userStoryboardGenerateAudio,
+userStoryboardLipSync
 } from '~/utils/businessApi'
 import { checkMiniMaxTtsTextLength } from '~/utils/ttsTextLimit'
-
-/** 配音/对口型轮询间隔：30 秒一次，避免高频打接口 */
+/** Legacy polling interval for storyboard audio task APIs. */
 export const STORYBOARD_AUDIO_POLL_INTERVAL_MS = 30_000
 
 /** 单次轮询最长等待（约 10 分钟） */

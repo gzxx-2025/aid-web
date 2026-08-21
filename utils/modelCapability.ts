@@ -134,6 +134,24 @@ export function resolveImageGenParamsForModel(
   }
 }
 
+/**
+ * 生成配置 GET 的智能体级默认值优先于模型 capability 默认值。
+ * 下拉选项仍由模型 capability 提供；这里只负责弹窗首次回显，不能因为
+ * 智能体配置的值不等于模型 defaultSize/defaultAspectRatio 就将其覆盖。
+ */
+export function resolveImageGenParamsFromAgentDefaults(
+  current: { resolution?: string | null; aspectRatio?: string | null },
+  item?: UserModelListItem | null
+): { resolution: string; aspectRatio: string } {
+  const modelDefaults = resolveImageGenParamsForModel({}, item, {
+    forceModelDefaults: true
+  })
+  return {
+    resolution: String(current.resolution || '').trim() || modelDefaults.resolution,
+    aspectRatio: String(current.aspectRatio || '').trim() || modelDefaults.aspectRatio
+  }
+}
+
 /** 图片清晰度档位排序（1k < 2k < 4k < 8k） */
 export function rankSizeCode(raw: string): number {
   const n = normalizeSizeCode(raw)

@@ -1,6 +1,5 @@
-import { fetchMediaStream } from './mediaFetch'
 import { deflate } from 'pako'
-
+import { fetchMediaStream } from './mediaFetch'
 export type CapturedVideoFrame = {
   url: string
   name: string
@@ -11,6 +10,7 @@ export type CapturedVideoFrame = {
 
 const DEFAULT_FRAME_INTERVAL_SECONDS = 1 / 30
 const MICROSECONDS_PER_SECOND = 1_000_000
+  const DEFAULT_FRAME_INTERVAL_US = Math.round(DEFAULT_FRAME_INTERVAL_SECONDS * MICROSECONDS_PER_SECOND)
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])
 const PNG_COLOR_TYPE_RGBA = 6
 const PNG_COMPRESSION_LEVEL = 6
@@ -21,12 +21,63 @@ interface TimelineFrameOptions {
   shouldContinue?: () => boolean
 }
 
+type TimelineThumb = { ts: number; img: Blob }
+
 /** 将时间限制在视频可解码的帧范围内，避免精确 duration 落入结束黑帧。 */
 export function clampVideoFrameTime(target: number, duration: number): number {
   const safeDuration = Number.isFinite(duration) ? Math.max(0, duration) : 0
   const lastFrameTime = Math.max(0, safeDuration - DEFAULT_FRAME_INTERVAL_SECONDS)
   const safeTarget = Number.isFinite(target) ? target : 0
   return Math.min(Math.max(0, safeTarget), lastFrameTime)
+}
+
+/**
+ * 为 tick 空帧生成邻近时间候选。
+ * WebAV 在精确时间点偶发返回 video=null（关键帧间隙 / 硬解降级），换邻近时间通常可解出。
+ */
+export function buildVideoFrameDecodeCandidates(targetUs: number, durationUs: number): number[] {
+  const safeDuration = Number.isFinite(durationUs) ? Math.max(0, Math.floor(durationUs)) : 0
+  if (safeDuration <= 0) return [0]
+
+  // tick(t >= duration) 会直接返回 done 且无画面
+  const lastUs = Math.max(0, safeDuration - 1)
+  const clampUs = (value: number) => Math.min(Math.max(0, Math.round(value)), lastUs)
+  const offsets = [
+    0,
+    DEFAULT_FRAME_INTERVAL_US,
+    -DEFAULT_FRAME_INTERVAL_US,
+    DEFAULT_FRAME_INTERVAL_US * 2,
+    -DEFAULT_FRAME_INTERVAL_US * 2,
+    DEFAULT_FRAME_INTERVAL_US * 3,
+    1_000,
+    -1_000
+  ]
+
+  const candidates: number[] = []
+  const seen = new Set<number>()
+  for (const offset of offsets) {
+    const next = clampUs((Number.isFinite(targetUs) ? targetUs : 0) + offset)
+    if (seen.has(next)) continue
+    seen.add(next)
+    candidates.push(next)
+  }
+  if (!seen.has(0)) candidates.push(0)
+  return candidates
+}
+
+/** 从列表中均匀取样，保证时间轴缩略图数量稳定。 */
+export function pickEvenlySpacedItems<T>(items: T[], count: number): T[] {
+  const safeCount = Math.max(0, Math.floor(count))
+  if (!items.length || safeCount <= 0) return []
+  if (items.length <= safeCount) return items.slice()
+  if (safeCount === 1) return [items[0]!]
+
+  const picked: T[] = []
+  for (let index = 0; index < safeCount; index += 1) {
+    const sourceIndex = Math.round((index * (items.length - 1)) / (safeCount - 1))
+    picked.push(items[sourceIndex]!)
+  }
+  return picked
 }
 
 function isMp4ClipParseError(error: unknown): boolean {
@@ -193,16 +244,28 @@ async function decodeVideoFrame(
   targetUs: number,
   maxWidth?: number
 ): Promise<Blob> {
-  const result = await clip.tick(targetUs)
-  const frame = result.video
-  if (!frame) throw new Error('目标帧解码失败')
+  const candidates = buildVideoFrameDecodeCandidates(targetUs, clip.meta.duration)
+  let lastError: unknown
 
-  try {
-    const rgba = await copyVideoFrameToRgba(frame)
-    return encodeRgbaFrameToPng(resizeRgbaFrame(rgba, maxWidth))
-  } finally {
-    frame.close()
+  for (const candidateUs of candidates) {
+    try {
+      const result = await clip.tick(candidateUs)
+      const frame = result.video
+      if (!frame) continue
+
+      try {
+        const rgba = await copyVideoFrameToRgba(frame)
+        return encodeRgbaFrameToPng(resizeRgbaFrame(rgba, maxWidth))
+      } finally {
+        frame.close()
+      }
+    } catch (error) {
+      lastError = error
+    }
   }
+
+  if (lastError instanceof Error) throw lastError
+  throw new Error('目标帧解码失败')
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {
@@ -242,6 +305,53 @@ export async function captureVideoUrlFrame(
   }
 }
 
+async function loadTimelineThumbs(
+  clip: LoadedVideoClip,
+  maxWidth: number,
+  count: number,
+  lastFrameUs: number
+): Promise<TimelineThumb[]> {
+  // 优先用官方 thumbnails：按步长取样，单点空帧会被跳过而不是整条失败
+  if (count === 1 || lastFrameUs <= 0) {
+    const first = await decodeVideoFrame(clip, 0, maxWidth)
+    return [{ ts: 0, img: first }]
+  }
+
+  const step = Math.max(1, Math.round(lastFrameUs / (count - 1)))
+  try {
+    const stepped = await clip.thumbnails(maxWidth, {
+      start: 0,
+      end: lastFrameUs,
+      step
+    })
+    if (stepped.length > 0) return stepped
+  } catch {
+    // 硬解失败等：继续走关键帧兜底
+  }
+
+  try {
+    const byKeyFrame = await clip.thumbnails(maxWidth, {
+      start: 0,
+      end: Math.max(lastFrameUs, clip.meta.duration)
+    })
+    if (byKeyFrame.length > 0) return byKeyFrame
+  } catch {
+    // 再走 tick 重试兜底
+  }
+
+  const frames: TimelineThumb[] = []
+  for (let index = 0; index < count; index += 1) {
+    const targetUs = Math.round((lastFrameUs * index) / (count - 1))
+    try {
+      const img = await decodeVideoFrame(clip, targetUs, maxWidth)
+      frames.push({ ts: targetUs, img })
+    } catch {
+      // 单个时间点失败不影响其余缩略图
+    }
+  }
+  return frames
+}
+
 /** 使用 WebAV 独立生成时间轴缩略图，不读取页面 video 元素，也不写入本地或数据库。 */
 export async function captureVideoTimelineFrames(
   sourceUrl: string,
@@ -257,12 +367,13 @@ export async function captureVideoTimelineFrames(
 
     const durationSeconds = clip.meta.duration / MICROSECONDS_PER_SECOND
     const lastFrameUs = toMicroseconds(clampVideoFrameTime(durationSeconds, durationSeconds))
+    const thumbs = await loadTimelineThumbs(clip, maxWidth, count, lastFrameUs)
+    if (options.shouldContinue?.() === false) return []
+
     const frames: string[] = []
-    for (let index = 0; index < count; index += 1) {
+    for (const thumb of pickEvenlySpacedItems(thumbs, count)) {
       if (options.shouldContinue?.() === false) return []
-      const targetUs = count === 1 ? 0 : Math.round((lastFrameUs * index) / (count - 1))
-      const frame = await decodeVideoFrame(clip, targetUs, maxWidth)
-      frames.push(await blobToDataUrl(frame))
+      frames.push(await blobToDataUrl(thumb.img))
     }
     return options.shouldContinue?.() === false ? [] : frames
   } finally {

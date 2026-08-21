@@ -1,5 +1,4 @@
-import { videoFrameScopeKey, videoFrameStorageKey } from './videoFrameScope.ts'
-
+import { videoFrameScopeKey,videoFrameStorageKey } from './videoFrameScope'
 export type VideoFrameLocalItem = {
   id: string
   url: string

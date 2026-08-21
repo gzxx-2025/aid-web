@@ -1,10 +1,10 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
+import type { RouteLikeLocation } from '~/types/routeLike'
 import type {
   UserAssetRpsFormImageRow,
   UserAssetRpsFormRow,
   UserAssetRpsRow
 } from '~/types/business-api'
-import type { useCreationStore } from '~/stores/creation'
+import { useCreationStore } from '~/stores/creation'
 import { sortUserAssetRpsRows, userAssetRpsList } from '~/utils/businessApi'
 import { roleVoiceBindingToFormFields } from '~/utils/characterVoiceBinding'
 import { resolveStoryScriptSaveContext } from '~/utils/storyScriptSaveContext'
@@ -68,7 +68,7 @@ function sanitizeSceneImageList(imgs: any[]): any[] {
 }
 
 function sanitizeSceneImageListForForms(imgs: any[], forms: UserAssetRpsFormRow[]): any[] {
-  let result = sanitizeSceneImageList(imgs)
+  const result = sanitizeSceneImageList(imgs)
   if (result.length <= 1) return result
 
   const formById = new Map<number, UserAssetRpsFormRow>()
@@ -298,7 +298,7 @@ export function step3SelectScopeKey(scope: Step3SelectScope): string {
 
 async function isStep3SelectScopeStillValid(
   store: CreationStore,
-  route: RouteLocationNormalizedLoaded,
+  route: RouteLikeLocation,
   expected: Step3SelectScope
 ): Promise<boolean> {
   const ctx = await resolveStoryScriptSaveContext(store, route)
@@ -316,7 +316,7 @@ export type EnsureStep3AssetsOptions = {
  */
 export async function ensureStep3AssetsForSelect(
   store: CreationStore,
-  route: RouteLocationNormalizedLoaded,
+  route: RouteLikeLocation,
   type: Step3SelectAssetType,
   options?: EnsureStep3AssetsOptions
 ): Promise<boolean> {
@@ -340,25 +340,30 @@ export async function ensureStep3AssetsForSelect(
     if (type === 'scene') {
       const { sceneNames, sceneImagesNext } = parseSceneAssets(sortedRps)
       store.updateSceneCharacterData({ scenes: sceneNames })
-      store.$patch({ sceneImages: sceneImagesNext })
+      // 对齐原 Pinia $patch 语义：顶层 record 合并、数组值整体替换
+      useCreationStore.setState((prev) => ({
+        sceneImages: { ...prev.sceneImages, ...sceneImagesNext }
+      }))
       return true
     }
 
     const parsed = parseFormBasedAssets(sortedRps, type)
     if (type === 'character') {
       store.updateSceneCharacterData({ characters: parsed.names })
-      store.$patch({
-        characterImages: parsed.imagesNext,
-        characterFormImages: parsed.formImagesNext,
-        characterForms: parsed.formsNext
-      })
+      // 对齐原 Pinia $patch 语义：顶层 record 合并、数组值整体替换
+      useCreationStore.setState((prev) => ({
+        characterImages: { ...prev.characterImages, ...parsed.imagesNext },
+        characterFormImages: { ...prev.characterFormImages, ...parsed.formImagesNext },
+        characterForms: { ...prev.characterForms, ...parsed.formsNext }
+      }))
     } else {
       store.updateSceneCharacterData({ props: parsed.names })
-      store.$patch({
-        propImages: parsed.imagesNext,
-        propFormImages: parsed.formImagesNext,
-        propForms: parsed.formsNext
-      })
+      // 对齐原 Pinia $patch 语义：顶层 record 合并、数组值整体替换
+      useCreationStore.setState((prev) => ({
+        propImages: { ...prev.propImages, ...parsed.imagesNext },
+        propFormImages: { ...prev.propFormImages, ...parsed.formImagesNext },
+        propForms: { ...prev.propForms, ...parsed.formsNext }
+      }))
     }
     return true
   } catch {

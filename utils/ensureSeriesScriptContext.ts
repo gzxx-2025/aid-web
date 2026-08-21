@@ -1,8 +1,7 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type { UserProjectType } from '~/types/business-api'
-import { userEpisodeCreate, userEpisodeList } from '~/utils/businessApi'
+import type { RouteLikeLocation } from '~/types/routeLike'
+import { userEpisodeCreate,userEpisodeList } from '~/utils/businessApi'
 import { fetchUserProjectDetailOnce } from '~/utils/userProjectDetailOnce'
-
 type StoreSlice = {
   currentProjectId: number | null
   currentEpisodeId: number | null
@@ -11,7 +10,7 @@ type StoreSlice = {
   setCurrentProjectContext: (p: { projectId?: number | null; episodeId?: number | null }) => void
 }
 
-function parseRouteEpisodeId(route: RouteLocationNormalizedLoaded): number | null {
+function parseRouteEpisodeId(route: RouteLikeLocation): number | null {
   const raw = route.query.episodeId
   if (raw === undefined || raw === '') return null
   const n = Number(raw)
@@ -23,7 +22,7 @@ function parseRouteEpisodeId(route: RouteLocationNormalizedLoaded): number | nul
  */
 export async function ensureScriptSaveContextForUpload(
   store: StoreSlice,
-  route: RouteLocationNormalizedLoaded
+  route: RouteLikeLocation
 ): Promise<{ projectId: number; episodeId: number; projectType: UserProjectType } | null> {
   const routePid = Number(route.query.projectId ?? route.query.id ?? route.query.workId)
   const projectId =

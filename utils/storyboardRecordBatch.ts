@@ -1,12 +1,12 @@
-import type { StoryboardPanel, StoryboardVideoPanel } from '~/types'
-import type { StoryboardRecordListType, StoryboardRecordRow } from '~/types/business-api'
+import type { StoryboardPanel,StoryboardVideoPanel } from '~/types'
+import type { StoryboardRecordListType,StoryboardRecordRow } from '~/types/business-api'
 import { userStoryboardRecordListByStoryboard } from '~/utils/businessApi'
-import { pickStoryboardCoverImage, sortStoryboardImagesForParent } from '~/utils/storyboardImageCover'
+import { pickStoryboardCoverImage,sortStoryboardImagesForParent } from '~/utils/storyboardImageCover'
 import {
-  isOriginalStoryboardVideoRecord,
-  isStoryboardRecordSelected,
-  resolveStoryboardRecordDisplayName,
-  resolveStoryboardVideoSourceLabel
+isOriginalStoryboardVideoRecord,
+isStoryboardRecordSelected,
+resolveStoryboardRecordDisplayName,
+resolveStoryboardVideoSourceLabel
 } from '~/utils/storyboardRecordRow'
 
 export type ProjectEpisodeContext = { projectId: number; episodeId: number }

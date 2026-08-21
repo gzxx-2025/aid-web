@@ -10,21 +10,21 @@ let pendingCaptchaToken: string | null = null
 export function setPendingCaptchaToken(token: string) {
   const t = String(token || '').trim()
   pendingCaptchaToken = t || null
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   if (t) sessionStorage.setItem(PENDING_CAPTCHA_TOKEN_KEY, t)
   else sessionStorage.removeItem(PENDING_CAPTCHA_TOKEN_KEY)
 }
 
 export function clearPendingCaptchaToken() {
   pendingCaptchaToken = null
-  if (import.meta.client) sessionStorage.removeItem(PENDING_CAPTCHA_TOKEN_KEY)
+  if ((typeof window !== 'undefined')) sessionStorage.removeItem(PENDING_CAPTCHA_TOKEN_KEY)
 }
 
 /** 取出并清空，保证 token 仅随下一次受保护请求发送一次 */
 export function takePendingCaptchaToken(): string | undefined {
   let token = pendingCaptchaToken
   pendingCaptchaToken = null
-  if (import.meta.client) {
+  if ((typeof window !== 'undefined')) {
     if (!token) token = sessionStorage.getItem(PENDING_CAPTCHA_TOKEN_KEY)
     sessionStorage.removeItem(PENDING_CAPTCHA_TOKEN_KEY)
   }
@@ -33,7 +33,7 @@ export function takePendingCaptchaToken(): string | undefined {
 
 /** 从 public-config 缓存判断行为验证码是否已开启（与登录页 captchaEnabled 逻辑一致） */
 export function isBehaviorCaptchaEnabledFromCache(): boolean {
-  if (!import.meta.client) return false
+  if (!(typeof window !== 'undefined')) return false
   try {
     const raw = sessionStorage.getItem(PUBLIC_CONFIG_STORAGE_KEY)
     if (!raw) return false

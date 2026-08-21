@@ -62,6 +62,19 @@
   transition: opacity 0.15s ease;
 }
 
+/*
+ * Tailwind preflight 的 `img { max-width: 100% }` 会把 30px 图标压进 18px 容器。
+ * 各编辑弹窗生成记录共用此尺寸，避免只修场景弹窗、其它弹窗继续偏小。
+ */
+.history-item .history-delete-icon img {
+  width: 30px !important;
+  height: 30px !important;
+  max-width: none !important;
+  max-height: none !important;
+  display: block;
+  flex-shrink: 0;
+}
+
 .history-item:hover .history-delete-icon,
 .history-item.active .history-delete-icon,
 .history-item .history-delete-icon:focus-visible {

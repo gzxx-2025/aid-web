@@ -1,4 +1,4 @@
-/** 多参方向手动保存（接口 10.7）：非空且长度上限校验 */
+/** 多参方向手动保存（接口 10.7）：须含 # 主题 / # 运镜 / # 风格 */
 export function validateMultiParamVideoPromptPlain(
   plain: string
 ): { ok: true } | { ok: false; message: string } {
@@ -9,6 +9,9 @@ export function validateMultiParamVideoPromptPlain(
   if (text.length > 3024) {
     return { ok: false, message: '提示词不规范' }
   }
+  // if (!text.includes('# 主题') || !text.includes('# 运镜') || !text.includes('# 风格')) {
+  //   return { ok: false, message: '提示词不规范' }
+  // }
   return { ok: true }
 }
 

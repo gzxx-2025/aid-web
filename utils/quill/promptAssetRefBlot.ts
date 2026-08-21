@@ -1,5 +1,5 @@
-import type QuillType from 'quill'
 import { EmbedBlot } from 'parchment'
+import type QuillType from 'quill'
 import type { PromptAssetRefValue } from '~/utils/storyboardPromptAssetRef'
 let registered = false
 

@@ -2,7 +2,7 @@
  * 按 /auth/public-config 的 upload 块做上传前本地校验。
  * 未配置分类型时回退 globalMaxSizeMb / globalAllowedExtensions。
  */
-import type { AuthUploadPublicConfig } from '~/types/business-api'
+import type { AuthUploadPublicConfig } from '~/types/business-api';
 
 export type UploadLimitCheckResult =
   | { ok: true }

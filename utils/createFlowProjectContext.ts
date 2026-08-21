@@ -1,4 +1,4 @@
-import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
+import type { RouteLikeLocation, RouteLikeNavigator } from '~/types/routeLike'
 import type { AidAgentListRequest, UserProjectType } from '~/types/business-api'
 import type { useCreationStore } from '~/stores/creation'
 import { fetchCreationStepStatusOnce } from '~/utils/creationStepStatusOnce'
@@ -16,7 +16,7 @@ type CreationStore = ReturnType<typeof useCreationStore>
 /** 当前流程上下文中的作品 ID（store 优先，与 stepRequestParams 一致） */
 export function resolveActiveFlowProjectId(
   store: Pick<CreationStore, 'currentProjectId'>,
-  route: RouteLocationNormalizedLoaded
+  route: RouteLikeLocation
 ): number | null {
   const storePid = Number(store.currentProjectId)
   if (Number.isFinite(storePid) && storePid > 0) return storePid
@@ -41,13 +41,13 @@ export function isProjectMissingApiError(err: unknown): boolean {
 }
 
 /** 内嵌「我的作品 / 资产库」面板：不应再拉当前作品的 detail / step/status */
-export function shouldSkipFlowProjectScopedApis(route: RouteLocationNormalizedLoaded): boolean {
+export function shouldSkipFlowProjectScopedApis(route: RouteLikeLocation): boolean {
   return isCreateFlowEmbeddedLibraryPanel(route.query)
 }
 
 /** 从路由 query 解析 episodeId；电影作品固定为 0，忽略 URL 中残留的剧集 episodeId */
 export function resolveFlowEpisodeIdFromRoute(
-  route: RouteLocationNormalizedLoaded,
+  route: RouteLikeLocation,
   projectType: UserProjectType | null | undefined
 ): number | null {
   if (projectType === 'movie') return 0
@@ -165,8 +165,8 @@ const FLOW_PROJECT_QUERY_KEYS = new Set([
  * 默认保留 panel=works|assets，避免打断内嵌库视图。
  */
 export async function clearStaleCreateFlowProjectContext(options: {
-  router: Router
-  route: RouteLocationNormalizedLoaded
+  router: RouteLikeNavigator
+  route: RouteLikeLocation
   store: CreationStore
   keepEmbeddedPanel?: boolean
 }): Promise<void> {
@@ -199,7 +199,7 @@ export async function clearStaleCreateFlowProjectContext(options: {
 export function isDeletedFlowProject(
   deletedProjectId: number,
   store: Pick<CreationStore, 'currentProjectId'>,
-  route: RouteLocationNormalizedLoaded
+  route: RouteLikeLocation
 ): boolean {
   const active = resolveActiveFlowProjectId(store, route)
   return active != null && active === deletedProjectId

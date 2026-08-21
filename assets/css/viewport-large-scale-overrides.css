@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 与 utils/viewportCompactScale.ts / plugins/viewport-compact-scale.client.ts 配合：
  * 视口宽度 ≥1441px 时根节点 zoom 映射至 1920 设计宽度。
  *
@@ -44,17 +44,18 @@ html[data-viewport-large-clamp='1'].app-shell-login body {
   min-height: var(--vps-comp-vh) !important;
 }
 
-html[data-viewport-large-clamp='1'] .home-page {
+html[data-viewport-large-clamp='1'] .home-page,
+html[data-viewport-large-clamp='1'] .home-new-page {
   height: var(--vps-comp-dvh) !important;
   min-height: var(--vps-comp-dvh) !important;
   max-height: var(--vps-comp-dvh) !important;
 }
 
 /* 锁定整页高度壳：首页 / 创作流程（与 layout 内联 style 配合） */
-html[data-viewport-large-clamp='1'].home-page-shell,
-html[data-viewport-large-clamp='1'].home-page-shell body,
-html[data-viewport-large-clamp='1'].home-page-shell #__nuxt,
-html[data-viewport-large-clamp='1'].home-page-shell #__nuxt > div,
+html[data-viewport-large-clamp='1'].layout-home-new,
+html[data-viewport-large-clamp='1'].layout-home-new body,
+html[data-viewport-large-clamp='1'].layout-home-new #__nuxt,
+html[data-viewport-large-clamp='1'].layout-home-new #__nuxt > div,
 html[data-viewport-large-clamp='1'].layout-create-flow,
 html[data-viewport-large-clamp='1'].layout-create-flow body,
 html[data-viewport-large-clamp='1'].layout-create-flow #__nuxt,

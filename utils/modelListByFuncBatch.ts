@@ -1,7 +1,7 @@
 import type {
-  UserModelListItem,
-  UserModelListByFuncGroupVO,
-  UserModelListByFuncRequest
+UserModelListByFuncGroupVO,
+UserModelListByFuncRequest,
+UserModelListItem
 } from '~/types/business-api'
 
 export type ModelListByFuncScope = Pick<UserModelListByFuncRequest, 'projectId' | 'episodeId'>

@@ -1,5 +1,5 @@
 function getViewportCompactScale(): number {
-  if (!import.meta.client) return 1
+  if (!(typeof window !== 'undefined')) return 1
   return document.documentElement.getAttribute('data-viewport-compact-scale') === '1' ? 0.75 : 1
 }
 
@@ -35,7 +35,7 @@ export function buildRetinaDisplayImageUrl(
   if (/x-oss-process=|imageView2\/|imageMogr2\//i.test(raw)) return raw
 
   const compact = getViewportCompactScale()
-  const dpr = import.meta.client
+  const dpr = (typeof window !== 'undefined')
     ? Math.min(options?.maxDpr ?? 3, window.devicePixelRatio || 1)
     : 2
   const targetW = Math.max(1, Math.round((displayCssWidthPx / compact) * dpr))

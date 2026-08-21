@@ -1,5 +1,5 @@
-import { userTaskCancel, userTaskCancelBatch } from '~/utils/businessApi'
 import type { UserTaskRow } from '~/types/business-api'
+import { userTaskCancel,userTaskCancelBatch } from '~/utils/businessApi'
 
 export function parseUserTaskId(raw: unknown): number | null {
   const n = Number(raw)
@@ -86,7 +86,9 @@ export async function requestCancelIndependentPendingTasksBatch(
   return res.cancelCount
 }
 
-export type UserTaskCancelCandidate = Pick<UserTaskRow, 'id' | 'taskType' | 'status'>
+/** taskType/status 允许缺失：内部会归一化兜底（缺 status 视作非 PENDING） */
+export type UserTaskCancelCandidate = Pick<UserTaskRow, 'id'> &
+  Partial<Pick<UserTaskRow, 'taskType' | 'status'>>
 
 function isPendingTaskStatus(status: unknown): boolean {
   return String(status ?? '').trim().toUpperCase() === 'PENDING'

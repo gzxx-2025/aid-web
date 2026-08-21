@@ -1,39 +1,36 @@
 {
-  "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
-    "strict": false,
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "jsx": "preserve",
-    "esModuleInterop": true,
+    "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "isolatedModules": true,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
-    "strictFunctionTypes": false,
-    "strictBindCallApply": false,
-    "strictPropertyInitialization": false,
-    "noImplicitThis": false,
-    "useUnknownInCatchVariables": false,
-    "alwaysStrict": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "~/*": ["./*"],
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "~/composables/*": ["./hooks/*"],
+      "~/*": ["./*"]
     }
   },
   "include": [
-    "env.d.ts",
-    "nuxt.config.ts",
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "**/*.vue"
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
   ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules"]
 }

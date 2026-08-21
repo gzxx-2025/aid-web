@@ -12,7 +12,7 @@ export async function payQrToImageSrc(qr: string | null | undefined): Promise<st
   const looksLikeImageUrl = /\.(png|jpe?g|gif|webp)(\?|$)/i.test(t)
   if (looksLikeHttp && looksLikeImageUrl) return t
 
-  if (import.meta.server) return ''
+  if ((typeof window === 'undefined')) return ''
 
   const { default: QRCode } = await import('qrcode')
   return QRCode.toDataURL(t, {

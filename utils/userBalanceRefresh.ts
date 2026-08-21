@@ -44,7 +44,7 @@ export function resetUserBalanceRefreshForTest() {
 
 async function defaultRefresh(): Promise<unknown> {
   const { useUserStore } = await import('~/stores/user')
-  return useUserStore().fetchBalance()
+  return useUserStore.getState().fetchBalance()
 }
 
 /**
@@ -54,7 +54,7 @@ export function scheduleUserBalanceRefresh(options?: {
   debounceMs?: number
 }): void {
   // SSR 不调度；单测可注入 refreshImpl 绕过 client 判断
-  if (refreshImpl == null && import.meta.client === false) return
+  if (refreshImpl == null && (typeof window !== 'undefined') === false) return
   if (refreshImpl == null && typeof window === 'undefined') return
   const debounceMs = options?.debounceMs ?? USER_BALANCE_REFRESH_DEBOUNCE_MS
   if (debounceTimer) clearTimeout(debounceTimer)

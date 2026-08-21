@@ -1,6 +1,5 @@
 import type { CreationStep } from '~/types'
 import type { UserProjectType } from '~/types/business-api'
-
 /** 创作流程步骤元数据（与路由 `/create/<key>`、流程条一致） */
 export interface CreationFlowStepMeta {
   key: CreationStep

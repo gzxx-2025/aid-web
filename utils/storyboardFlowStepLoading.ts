@@ -1,12 +1,12 @@
 import { resolveCurrentStep4LiveGenScopeBlobs } from '~/composables/useCreationStoreHydration'
-import { step4ScopeBlobHasVideoBatchGenWork } from '~/utils/storyboardListBootstrap'
-import { isModalImageGenSessionActive } from '~/utils/storyboardImageModalGenSession'
+import type { useCreationStore } from '~/stores/creation'
 import { modalGenSessionScopeFromStore } from '~/utils/modalGenSessionScope'
 import {
-  readStoryboardDubbingModalGenSession,
-  isStoryboardDubbingModalUserDismissed
+isStoryboardDubbingModalUserDismissed,
+readStoryboardDubbingModalGenSession
 } from '~/utils/storyboardDubbingModalGenSession'
-import type { useCreationStore } from '~/stores/creation'
+import { isModalImageGenSessionActive } from '~/utils/storyboardImageModalGenSession'
+import { step4ScopeBlobHasVideoBatchGenWork } from '~/utils/storyboardListBootstrap'
 
 type CreationStore = ReturnType<typeof useCreationStore>
 
@@ -20,7 +20,7 @@ function scopeKeysMatch(currentKey: string, sessionKey: string): boolean {
 }
 
 function isCurrentScopeDubbingModalSessionActive(store: CreationStore): boolean {
-  if (!import.meta.client) return false
+  if (!(typeof window !== 'undefined')) return false
   const sessionScope = modalGenSessionScopeFromStore(store)
   const session = readStoryboardDubbingModalGenSession(sessionScope)
   if (!session) return false
@@ -86,7 +86,7 @@ export function isStoryboardScriptFlowStepGenerating(
   if (hasStoryboardPanelImageGenerating(store)) return true
   if (hasPersistedStoryboardModalImageGenTask(store, route)) return true
   if (
-    import.meta.client &&
+    (typeof window !== 'undefined') &&
     isModalImageGenSessionActive(undefined, modalGenSessionScopeFromStore(store))
   ) {
     return true

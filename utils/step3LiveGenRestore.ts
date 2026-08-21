@@ -1,4 +1,4 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
+import type { RouteLikeLocation } from '~/types/routeLike'
 import {
   fetchUserTaskDetailOnce,
   isTerminalTaskStatus
@@ -22,7 +22,7 @@ function step3ScopeBlobHasLiveWork(blob: Step3GenVisualScopeMaps): boolean {
 /** 头部流程条「场景/角色/道具」步骤是否展示 loading（跨步骤页刷新后仍有效） */
 export function isStep3FlowStepGenerating(
   store: CreationStore,
-  route?: RouteLocationNormalizedLoaded
+  route?: RouteLikeLocation
 ): boolean {
   if (store.isExtractingAssets) return true
   if (store.isGeneratingStep3Visual) return true
@@ -52,7 +52,7 @@ function clearGeneratingFromScopeMap<T extends Record<string | number, string>>(
  */
 export function reconcileStep3ScopeBlobsWithFlatStore(
   store: CreationStore,
-  route?: RouteLocationNormalizedLoaded
+  route?: RouteLikeLocation
 ): void {
   const flatHasGenerating =
     Object.values(store.sceneGenerationStatus).some((s) => s === 'generating') ||
@@ -79,7 +79,7 @@ export function reconcileStep3ScopeBlobsWithFlatStore(
 /** SSE / 任务终态后刷新第三步流程条 loading（modal 快照、follow 计数与 generating 态对齐） */
 export async function settleStep3FlowLoadingState(
   store: CreationStore,
-  route?: RouteLocationNormalizedLoaded
+  route?: RouteLikeLocation
 ): Promise<void> {
   await purgeTerminalStep3ModalSseTasks(store, route)
   reconcileStep3ScopeBlobsWithFlatStore(store, route)
@@ -92,7 +92,7 @@ export async function settleStep3FlowLoadingState(
  */
 export async function purgeTerminalStep3ModalSseTasks(
   store: CreationStore,
-  route?: RouteLocationNormalizedLoaded
+  route?: RouteLikeLocation
 ): Promise<void> {
   const candidates = resolveCurrentStep3GenVisualScopeBlobs(store, route)
   for (const { key, blob } of candidates) {

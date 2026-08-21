@@ -2,10 +2,12 @@
  * 分镜视频提示词：@音频N[音频-名称] 占位（与图片 ref 平行，避免膨胀 storyboardPromptAssetRef）
  */
 
+import { normalizePromptAssetPlaceholderName } from './storyboardPromptAssetCore'
+
 const API_AUDIO_PLACEHOLDER_RE = /@音频(\d+)\[([^\]]+)\]/g
 
 export function ensureAudioNamePrefix(displayName: string): string {
-  const raw = String(displayName || '').trim()
+  const raw = normalizePromptAssetPlaceholderName(displayName)
   if (!raw) return '音频-未命名'
   if (raw.startsWith('音频-')) return raw
   return `音频-${raw}`

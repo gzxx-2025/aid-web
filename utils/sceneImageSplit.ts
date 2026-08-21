@@ -1,3 +1,5 @@
+import { withAppBasePath } from '~/utils/appBasePath'
+
 /** 场景四宫格切图顺序：主视、反打、左立面、右立面（左上、右上、左下、右下） */
 export const SCENE_SPLIT_QUADRANT_LABELS = ['主视', '反打', '左立面', '右立面'] as const
 
@@ -42,21 +44,11 @@ function isCrossOriginUrl(url: string): boolean {
   }
 }
 
-/** 解析 Nuxt 同源 API 路径（兼容部署在 /aid/ 等子路径） */
+/** 解析同源 API 路径（兼容部署在 /aid/ 等子路径） */
 function resolveSameOriginApiUrl(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`
   if (typeof window === 'undefined') return p
-  try {
-    const { app } = useRuntimeConfig()
-    const base = String(app?.baseURL ?? '/')
-    if (!base || base === '/' || base === '/_nuxt/' || base === '/_nuxt') {
-      return p
-    }
-    const normalized = base.endsWith('/') ? base.slice(0, -1) : base
-    return `${normalized}${p}`
-  } catch {
-    return p
-  }
+  return withAppBasePath(p)
 }
 
 /** 读取场景编辑弹窗画布预览区已展示的图片元素 */

@@ -122,17 +122,16 @@ export interface AuthCryptoPublicConfig {
 
 /** /auth/public-config → basic */
 export interface AuthBasicPublicConfig {
-  /** 网站名称，用于页面标题、品牌文案与 SEO。 */
+  /** 网站名称（浏览器标题 / 品牌文案 / SEO） */
   site_name?: string
-  /** 网站描述，用于搜索摘要与分享信息。 */
+  /** 网站描述（搜索摘要 / 分享卡片） */
   site_description?: string
-  /** 网站关键词，使用英文逗号分隔。 */
+  /** 网站关键词，英文逗号分隔 */
   site_keywords?: string
   record_filing_number?: string
   version_number?: string
   privacy_policy?: string
   terms_of_service?: string
-  membership_agreement?: string
   app_permissions_description?: string
   personal_information_collection_list?: string
   third_party_sdk_and_information_sharing_list?: string
@@ -154,7 +153,9 @@ export interface AuthBasicPublicConfig {
 
 /** /auth/public-config → brand */
 export interface AuthBrandPublicConfig {
+  /** 平台 LOGO 图片地址 */
   platformLogoUrl?: string | null
+  /** 浏览器页签图标地址；C 端可据此动态替换 Favicon */
   faviconUrl?: string | null
 }
 
@@ -439,6 +440,10 @@ export interface UserProjectRow {
   scriptType?: string | null
   videoStyleType?: string | null
   videoStyleValue?: string | null
+  /** 项目当前风格来源：official 官方 / custom 用户自定义 */
+  styleSource?: 'official' | 'custom' | null
+  /** 项目当前风格在对应来源表中的资产ID */
+  styleAssetId?: number | null
   /** 已存在角色/场景/道具资产时为 true，前端不得切换风格 */
   styleLocked?: boolean | null
   defaultGenMode?: string | null
@@ -653,11 +658,19 @@ export interface UserAssetCustomDeleteRequest {
 /** POST /api/user/asset/custom/page — 合并个人+官方参考资产分页 */
 export interface MergedAssetPageRequest {
   assetType?: string
+  /** 精选风格分类；仅 assetType=style 时使用。 */
+  categoryCode?: string
   keyword?: string
   /** custom=个人(可编辑/删除) / official=官方(只读)；兼容 USER/OFFICIAL */
   sourceFlag?: 'custom' | 'official' | 'USER' | 'OFFICIAL' | 'ALL' | string
   pageNum?: number
   pageSize?: number
+}
+
+/** POST /api/user/asset/style/category/list */
+export interface UserAssetStyleCategoryItem {
+  code: string
+  label: string
 }
 
 /** custom/page 列表项 */
@@ -785,9 +798,14 @@ export interface RoleVoiceBindingVO {
 export interface UserAssetRpsFormRow {
   id: number
   assetId?: number | null
+  assetType?: UserAssetApiType | string | null
   name: string
   imageUrl?: string | null
   promptText?: string | null
+  /** 角色形态的完整视觉提示词 */
+  descriptions?: string | null
+  /** 场景/道具形态的生图提示词 */
+  prompt?: string | null
   /** v2.25.0+ 形态层解析字段（scene/prop） */
   summary?: string | null
   introduction?: string | null
@@ -909,6 +927,8 @@ export interface UserAssetRpsFormImageRow {
   name?: string | null
   imageUrl?: string | null
   sourceType?: string | null
+  /** 列表展示用提示词；仅后端允许展示的来源返回 */
+  promptText?: string | null
   isUse?: number | null
   descriptionIndex?: number | null
   referenceImages?: string[] | null
@@ -941,7 +961,8 @@ export interface UserAssetRpsFormImageListRequest {
   episodeId?: number
   assetId?: number
   assetType?: UserAssetApiType | string
-  isUse?: number
+  /** 0 未使用 1 已使用；null / 不传查全部（编辑弹窗显式传 null 拉全量） */
+  isUse?: number | null
 }
 
 /** POST /api/user/asset/rps/form-image/delete */
@@ -1076,6 +1097,9 @@ export interface UserAssetRpsUpdateFormRequest {
   appearanceId?: number
   /** 外观完整视觉描述，单条字符串 */
   descriptions?: string
+
+  /** 场景/道具形态的生图提示词 */
+  prompt?: string
 
   /** 道具形态（2.6.3）复用 summary / introduction */
 
@@ -1218,7 +1242,6 @@ export interface ScriptDetailRow {
   projectId: number
   episodeId: number
   originalText?: string | null
-  simplifiedText?: string | null
   isExtracted?: number
   comicVersion?: number
   status?: number
@@ -1350,16 +1373,12 @@ export interface UserStoryboardCreateRequest {
   projectId: number
   episodeId?: number
   title?: string
+  /** 复制来源分镜 ID；传入时由服务端原子克隆内容与图片/原视频产物 */
+  sourceStoryboardId?: number
 }
 
-export interface UserStoryboardCreateData {
-  id: number
-  projectId: number
-  episodeId?: number
-  sortOrder?: number
-  title?: string
-  createTime?: string
-}
+/** 创建/复制响应与分镜列表单行同结构；复制时会立即返回新记录的内容与最终产物字段。 */
+export type UserStoryboardCreateData = UserStoryboardListRow
 
 /** /api/user/storyboard/delete — 单删传 `[id]`，批删传 `[id1, id2, ...]`，单次最多 200 条 */
 export interface UserStoryboardDeleteRequest {
@@ -2388,7 +2407,7 @@ export interface TimelineSubtitleItem {
   cues?: TimedSubtitleCue[] | null
   sourceMediaFingerprint?: string | null
   sourceDialogueFingerprint?: string | null
-  recognitionStatus?: 'PROCESSING' | 'COMPLETED' | 'FAILED' | string | null
+  recognitionStatus?: 'PROCESSING' | 'COMPLETED' | 'TEXT_FALLBACK' | 'FAILED' | string | null
   recognitionProvider?: string | null
   recognitionUpdatedAt?: string | null
   recognitionError?: string | null
@@ -2630,6 +2649,8 @@ export interface UserModelListItem {
   modelName: string
   modelType: AiModelType
   costCredits?: number | null
+  /** 模型级免费状态；true 时实际任务费用为 0，原价格仍保留展示 */
+  isFree?: boolean
   priority?: number | null
   providerName?: string | null
   /** 服务商 LOGO 图标 URL（厂家品牌图标，无配置时为 null） */
@@ -2893,7 +2914,7 @@ export type UserAssetExtractFormGenerateImageData = AssetExtractTaskSyncVO & {
 
 /** POST /api/user/asset/extract/form/generate-card-image（v2026-06 纯批量 imageIds） */
 export interface UserAssetExtractFormGenerateCardImageRequest {
-  /** 白底主图 aid_role_prop_scene_form_image.id 列表，须 sourceType=ai_auto */
+  /** 参考底图 aid_role_prop_scene_form_image.id 列表（平台生成含 ai_edit_chat 等，或 upload） */
   imageIds: number[]
   /** 智能体编码，biz_category=main_character_card_image */
   agentCode: string
@@ -3211,45 +3232,6 @@ export interface VoiceTagBundleData {
   enums?: Record<string, VoiceEnumItem[]>
 }
 
-/** 用户引导进度 — POST /api/user/onboarding/progress/* */
-export type OnboardingTourStatusApi = 'completed' | 'skipped' | 'in_progress'
-
-export interface OnboardingTourProgressRow {
-  tourId: string
-  status: OnboardingTourStatusApi
-  tourVersion: number
-  lastStepId?: string | null
-  updatedAt: string
-}
-
-export interface OnboardingProgressData {
-  schemaVersion: number
-  globalDismissed: boolean
-  updatedAt: string
-  tours: OnboardingTourProgressRow[]
-}
-
-export interface OnboardingProgressReportBody {
-  tourId: string
-  status: OnboardingTourStatusApi
-  tourVersion: number
-  lastStepId?: string | null
-  clientUpdatedAt: string
-}
-
-export interface OnboardingProgressSyncBody {
-  tours: OnboardingProgressReportBody[]
-}
-
-export interface OnboardingProgressDismissBody {
-  dismissed: boolean
-}
-
-export interface OnboardingProgressReportResult {
-  success: boolean
-  applied?: boolean
-}
-
 /** POST /api/user/home/banner/list */
 export type HomeBannerType = 'image' | 'video' | 'gif'
 export type HomeBannerLinkType = 'none' | 'external' | 'internal'
@@ -3294,6 +3276,11 @@ export interface BillingRuleItemVO {
   durationMax?: number | null
   inputTokensMin?: number | null
   inputTokensMax?: number | null
+  referenceImageCountMin?: number | null
+  referenceImageCountMax?: number | null
+  inputVideoCountMin?: number | null
+  inputVideoCountMax?: number | null
+  audioMode?: string | null
   unitPrice?: number | null
   pricePerSecond?: number | null
   packagePrice?: number | null
@@ -3301,19 +3288,20 @@ export interface BillingRuleItemVO {
   outputPricePerMillion?: number | null
   /** 输入图片单价 Credits/张（档位覆盖值；null=用模型级 inputPricing） */
   inputImagePrice?: number | null
+  inputImageFreeCount?: number | null
   /** 输入视频单价 Credits/秒（档位覆盖值；null=用模型级 inputPricing） */
   inputVideoPricePerSecond?: number | null
-  remark?: string | null
 }
 
 /** 输入媒体计费说明（图片/视频作为输入时的附加费） */
 export interface BillingInputPricingVO {
   imageSupported?: boolean | null
-  /** Credits/张；null 或 0 = 输入免费 */
+  /** 模型级 Credits/张；null 时查看 rules[].inputImagePrice */
   imageUnitPrice?: number | null
+  imageFreeCount?: number | null
   imageMaxCount?: number | null
   videoSupported?: boolean | null
-  /** Credits/秒；null 或 0 = 免费 */
+  /** 模型级 Credits/秒；null 时查看 rules[].inputVideoPricePerSecond */
   videoUnitPrice?: number | null
   videoMaxSeconds?: number | null
   videoMaxCount?: number | null
@@ -3329,12 +3317,12 @@ export interface ModelBillingDetailVO {
   modelTypeName?: string | null
   generateMode?: string | null
   billingMode?: string | null
+  /** true 表示本次模型调用免费；价格规则仍保留展示（兼容升级前接口可缺省） */
+  isFree?: boolean
   meterType?: string | null
   meterTypeName?: string | null
-  priceMultiplier?: number | null
   billingDesc?: string | null
   creditUnit?: string | null
-  remark?: string | null
   columns: BillingColumnVO[]
   rules: BillingRuleItemVO[]
   /** 输入媒体计费；文本模型未配置时为 null */

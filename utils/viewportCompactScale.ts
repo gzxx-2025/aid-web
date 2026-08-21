@@ -9,7 +9,7 @@
  * 现行策略：
  * - 根节点 zoom 恒为 1，不撑开虚假 layoutWidth（避免半屏空白 + 文字缩小）
  * - 仅写入 data-viewport-* 供宽屏/系统缩放 CSS 微调
- * - 窄 CSS 视口依赖媒体查询与现有 compact CSS（home-new-compact-viewport / create-flow-compact-viewport 等）
+ * - 窄 CSS 视口依赖媒体查询与现有 compact CSS（home-new-compact-viewport 等）
  *
  * 由 plugins/viewport-compact-scale.client.ts 与 composables/useViewportCompactScale.ts 共用。
  */

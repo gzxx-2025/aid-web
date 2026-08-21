@@ -1,26 +1,26 @@
-import axios from 'axios'
 import type {
-  AxiosInstance,
-  AxiosRequestConfig,
-  AxiosResponse,
-  InternalAxiosRequestConfig
+AxiosInstance,
+AxiosRequestConfig,
+AxiosResponse,
+InternalAxiosRequestConfig
 } from 'axios'
+import axios from 'axios'
 import {
-  clearPendingCaptchaToken,
-  isCaptchaProtectedAuthPath,
-  takePendingCaptchaToken
-} from '~/utils/captchaToken'
-import {
-  applyEncryptedPayloadToAxiosConfig,
-  maybeDecryptApiPayload,
-  prepareEncryptedRequest,
-  shouldEncryptApiPath,
-  takeAxiosRequestAesKey
+applyEncryptedPayloadToAxiosConfig,
+maybeDecryptApiPayload,
+prepareEncryptedRequest,
+shouldEncryptApiPath,
+takeAxiosRequestAesKey
 } from '~/utils/apiCrypto'
 import {
-  isInsufficientBalanceMessage,
-  shouldOpenUserRechargeFromSseError,
-  type SseRechargeErrorData
+clearPendingCaptchaToken,
+isCaptchaProtectedAuthPath,
+takePendingCaptchaToken
+} from '~/utils/captchaToken'
+import {
+isInsufficientBalanceMessage,
+shouldOpenUserRechargeFromSseError,
+type SseRechargeErrorData
 } from '~/utils/insufficientBalanceRecharge'
 
 /** 开发环境请求前缀（与 nuxt.config 里 /url 代理一致，按需改） */
@@ -33,11 +33,11 @@ const API_BASE_DEVELOPMENT = '/url'
  */
 export function resolveClientApiUrl(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`
-  if (import.meta.env.DEV) {
+  if ((process.env.NODE_ENV === 'development')) {
     return `${API_BASE_DEVELOPMENT.replace(/\/$/, '')}${p}`
   }
-  if (import.meta.client) {
-    const base = `${window.location.protocol}//${window.location.host}${import.meta.env.BASE_URL || '/'}aid`
+  if ((typeof window !== 'undefined')) {
+    const base = `${window.location.protocol}//${window.location.host}/aid`
     return `${base.replace(/\/$/, '')}${p}`
   }
   return `${API_BASE_DEVELOPMENT.replace(/\/$/, '')}${p}`
@@ -48,9 +48,9 @@ export function resolveClientApiUrl(path: string): string {
  * SSR/预渲染阶段不能访问 window，统一回退到相对路径。
  */
 function resolveApiBaseURL(): string {
-  if (import.meta.env.DEV) return API_BASE_DEVELOPMENT
-  if (import.meta.client) {
-    return `${window.location.protocol}//${window.location.host}${import.meta.env.BASE_URL}aid`
+  if ((process.env.NODE_ENV === 'development')) return API_BASE_DEVELOPMENT
+  if ((typeof window !== 'undefined')) {
+    return `${window.location.protocol}//${window.location.host}/aid`
   }
   return API_BASE_DEVELOPMENT
 }
@@ -64,7 +64,7 @@ function isLoginRequiredApi(url?: string): boolean {
 }
 
 export function redirectToLogin(): void {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     localStorage.removeItem('token')
     localStorage.removeItem('user-info')
@@ -75,7 +75,7 @@ export function redirectToLogin(): void {
   const isInLoginPage = window.location.pathname.startsWith('/login')
   if (isInLoginPage) return
   const next = `/login?redirect=${encodeURIComponent(current)}`
-  window.location.href = next
+  window.location.assign(new URL(next, window.location.origin).toString())
 }
 
 function extractApiMessage(data: unknown): string {
@@ -103,7 +103,7 @@ function handleLoginRequiredResponse(data?: unknown): boolean {
  * - `X-Requested-With: XMLHttpRequest`
  */
 export function buildUserApiAuthHeaders(): Record<string, string> {
-  if (!import.meta.client) {
+  if (!(typeof window !== 'undefined')) {
     return { 'X-Requested-With': 'XMLHttpRequest' }
   }
   const token = localStorage.getItem('token') || ''
@@ -167,7 +167,7 @@ function applyCaptchaTokenHeader(config: InternalAxiosRequestConfig, captchaToke
 }
 
 function attachCaptchaTokenIfNeeded(config: InternalAxiosRequestConfig) {
-  if (!import.meta.client || !isCaptchaProtectedAuthPath(config.url)) return
+  if (!(typeof window !== 'undefined') || !isCaptchaProtectedAuthPath(config.url)) return
   const existing = readCaptchaTokenFromHeaders(config.headers)
   const captchaToken = existing || takePendingCaptchaToken()
   if (existing) clearPendingCaptchaToken()
@@ -186,7 +186,7 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use(
   async (config) => {
     // 添加认证信息
-    const token = import.meta.client ? localStorage.getItem('token') : ''
+    const token = (typeof window !== 'undefined') ? localStorage.getItem('token') : ''
     const loginRequired = isLoginRequiredApi(config.url)
     if (!token && loginRequired) {
       redirectToLogin()
@@ -212,7 +212,7 @@ api.interceptors.request.use(
 
     // 信封加密（由 /auth/public-config 的 crypto.enabled 控制）
     if (
-      import.meta.client &&
+      (typeof window !== 'undefined') &&
       shouldEncryptApiPath(config.url) &&
       !(typeof FormData !== 'undefined' && config.data instanceof FormData)
     ) {
@@ -254,7 +254,7 @@ api.interceptors.response.use(
           emitRechargeEvent()
         }
         // 处理业务错误（与后端文档字段 msg 一致）
-        console.error('API 错误:', extractApiMessage(data))
+        console.log('API 错误:', extractApiMessage(data))
         return Promise.reject(data)
       }
     }

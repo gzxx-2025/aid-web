@@ -1,9 +1,8 @@
 /**
  * 角色设定弹窗内不可编辑片段：小节标题、基本信息字段名（原子 Embed）。
  */
-import type QuillType from 'quill'
 import { EmbedBlot } from 'parchment'
-
+import type QuillType from 'quill'
 let registered = false
 
 export function registerCharacterSettingProtectedBlots(Quill: typeof QuillType): void {

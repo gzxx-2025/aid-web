@@ -2,6 +2,11 @@
  * 纯文本视频提示词 + 默认分镜参考图：文首注入 @图片1[name]（不回写后端）
  */
 
+import {
+  formatAssetApiPlaceholder,
+  normalizePromptAssetPlaceholderName
+} from './storyboardPromptAssetCore'
+
 export interface DefaultReferenceImageLike {
   id?: string | number
   url?: string
@@ -25,14 +30,6 @@ export function promptPlainHasAssetPlaceholders(plain: string): boolean {
   return text.includes('@图片') || text.includes('@音频')
 }
 
-function stripAt(s: string): string {
-  return s.startsWith('@') ? s.slice(1) : s
-}
-
-function formatImagePlaceholder(imageIndex: number, name: string): string {
-  return `@图片${imageIndex}[${name}]`
-}
-
 /** 从导入参考图项构建可点击的 prompt 资产 */
 export function referenceImageToDefaultPromptAsset(
   ref: DefaultReferenceImageLike,
@@ -40,7 +37,7 @@ export function referenceImageToDefaultPromptAsset(
 ): InjectedDefaultRefAsset | null {
   const url = String(ref.url || ref.thumbnail || '').trim()
   if (!url) return null
-  const name = stripAt(String(ref.title || ref.name || '').trim()) || '分镜图'
+  const name = normalizePromptAssetPlaceholderName(ref.title || ref.name, '分镜图')
   const idx = Math.max(1, Math.floor(Number(imageIndex) || 1))
   const id = String(ref.id ?? '').trim()
   return {
@@ -70,7 +67,7 @@ export function prependDefaultReferenceImageToPlainPrompt(
     return { plain: text, asset: null, injected: false }
   }
   return {
-    plain: `${formatImagePlaceholder(asset.imageIndex, asset.name)}\n${text}`,
+    plain: `${formatAssetApiPlaceholder(asset.imageIndex, asset.name)}\n${text}`,
     asset,
     injected: true
   }

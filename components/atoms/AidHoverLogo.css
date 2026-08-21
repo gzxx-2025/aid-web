@@ -1,0 +1,71 @@
+.aid-hover-logo {
+  --aid-logo-color: #ffffff;
+  --aid-draw-duration: 680ms;
+  --aid-draw-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --aid-fill-ease: cubic-bezier(0, 0, 0.2, 1);
+  display: block;
+  width: 54px;
+  min-width: 54px;
+  height: auto;
+  color: var(--aid-logo-color);
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.aid-hover-logo__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  text-rendering: geometricPrecision;
+}
+
+.aid-hover-logo__path {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.aid-hover-logo__group.is-reduced .aid-hover-logo__path {
+  fill: currentColor;
+  stroke: transparent;
+  stroke-dashoffset: 0;
+}
+
+.aid-hover-logo__group.is-complete .aid-hover-logo__path {
+  fill: currentColor;
+  stroke: transparent;
+  stroke-dashoffset: 0;
+  transition: fill 220ms var(--aid-fill-ease);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .aid-hover-logo__group.is-drawing .aid-hover-logo__path {
+    animation:
+      aid-logo-draw var(--aid-draw-duration) var(--aid-draw-ease) forwards,
+      aid-logo-fill 200ms var(--aid-fill-ease) forwards;
+    animation-delay: var(--draw-delay), calc(var(--draw-delay) + var(--aid-draw-duration) - 40ms);
+  }
+
+  .aid-hover-logo__group.is-drawing.is-hover-draw {
+    --aid-draw-duration: 400ms;
+  }
+}
+
+@keyframes aid-logo-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes aid-logo-fill {
+  to {
+    fill: currentColor;
+    stroke: transparent;
+  }
+}

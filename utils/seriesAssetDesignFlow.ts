@@ -1,29 +1,29 @@
-import { message } from 'ant-design-vue'
+import { message } from 'antd'
 import {
-  fetchUserTaskDetailOnce,
-  waitUserTaskSseTerminal
+fetchUserTaskDetailOnce,
+waitUserTaskSseTerminal
 } from '~/composables/useTaskSseFollow'
 import type {
-  UserAssetExtractFormGenerateImageData,
-  UserAssetRpsRow
+AssetExtractType,
+UserAssetExtractFormGenerateImageData,
+UserAssetRpsRow
 } from '~/types/business-api'
 import {
-  userAssetExtractFormGenerateImage,
-  userAssetRpsCreate,
-  userAssetRpsFormCreate,
-  userAssetRpsFormImageCreate,
-  userAssetRpsFormImageList,
-  userAssetRpsUpdateMain
+userAssetExtractFormGenerateImage,
+userAssetRpsCreate,
+userAssetRpsFormCreate,
+userAssetRpsFormImageCreate,
+userAssetRpsFormImageList,
+userAssetRpsUpdateMain
 } from '~/utils/businessApi'
 import { setFormImageInUse } from '~/utils/formImageAutoUse'
 import {
-  FORM_IMAGE_SCENE_CODE_BY_TYPE,
-  getProjectGenConfigBySceneCode,
-  resolveProjectGenImageSubmitFields
+FORM_IMAGE_SCENE_CODE_BY_TYPE,
+getProjectGenConfigBySceneCode,
+resolveProjectGenImageSubmitFields
 } from '~/utils/projectGenConfig'
-import type { AssetExtractType } from '~/types/business-api'
 
-export type SeriesAssetDesignType = 'character' | 'prop'
+export type SeriesAssetDesignType = Extract<AssetExtractType, 'character' | 'prop'>
 
 export interface SeriesCharacterDesignForm {
   name: string
@@ -180,9 +180,8 @@ export async function ensureSeriesAssetDraft(payload: {
   }
 
   const pendingName =
-    payload.form.name.trim() ||
-    (payload.assetType === 'character' ? '角色: 未命名' : '道具: 未命名')
-  let row = await userAssetRpsCreate({
+    payload.form.name.trim() || (payload.assetType === 'character' ? '角色: 未命名' : '道具: 未命名')
+  const row = await userAssetRpsCreate({
     projectId: payload.projectId,
     episodeId: payload.episodeId,
     name: pendingName,
@@ -201,12 +200,7 @@ export async function ensureSeriesAssetDraft(payload: {
     { isManual: true }
   )
 
-  const formId = await ensureDefaultForm(
-    payload.projectId,
-    payload.episodeId,
-    assetId,
-    row
-  )
+  const formId = await ensureDefaultForm(payload.projectId, payload.episodeId, assetId, row)
 
   return {
     assetId,

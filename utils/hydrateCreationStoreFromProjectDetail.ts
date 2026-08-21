@@ -41,9 +41,12 @@ export function mapProjectScriptType(
   return 'plot'
 }
 
-/** 由 project/detail 的 videoStyleType / videoStyleValue 构造 selectedStyle（风格库加载后可再匹配） */
+/** 由 project/detail 的风格快照与稳定来源构造 selectedStyle，风格库加载后补齐真实图片。 */
 export function buildSelectedStyleFromProjectDetail(
-  detail: Pick<UserProjectRow, 'id' | 'videoStyleType' | 'videoStyleValue' | 'coverUrl'>
+  detail: Pick<
+    UserProjectRow,
+    'id' | 'videoStyleType' | 'videoStyleValue' | 'coverUrl' | 'styleSource' | 'styleAssetId'
+  >
 ): GlobalSettingData['selectedStyle'] {
   const type = String(detail.videoStyleType || '').trim()
   const value = String(detail.videoStyleValue || '').trim()
@@ -51,10 +54,19 @@ export function buildSelectedStyleFromProjectDetail(
 
   const isUrl = /^https?:\/\//i.test(value)
   const name = type || (isUrl ? '自定义风格' : value) || '已选风格'
+  const source = detail.styleSource === 'official' || detail.styleSource === 'custom'
+    ? detail.styleSource
+    : null
+  const assetId = Number(detail.styleAssetId)
+  const stableSource = source && Number.isFinite(assetId) && assetId > 0 ? source : null
   return {
-    id: `project-${detail.id}-style`,
+    id: stableSource
+      ? `${stableSource.toUpperCase()}-${assetId}`
+      : `project-${detail.id}-style`,
     name,
-    thumbnail: isUrl ? value : String(detail.coverUrl || '').trim(),
+    // 项目封面不是风格图；稳定ID会在风格库加载后补齐真实图片。
+    thumbnail: isUrl ? value : (stableSource ? '' : String(detail.coverUrl || '').trim()),
+    ...(stableSource ? { assetId, sourceFlag: stableSource } : {}),
     ...(type ? { assetName: type } : {}),
     ...(!isUrl && value ? { promptText: value } : {})
   }
@@ -101,8 +113,10 @@ export function applyProjectDetailToCreationStore(
   })
   store.setCurrentMediaContext({
     projectStatus: detail.status ?? null,
+    projectStatusReason: detail.statusReason ?? null,
     projectIsPublic: detail.isPublic ?? null,
     episodeStatus: detail.projectType === 'movie' ? detail.status ?? null : null,
+    episodeStatusReason: detail.projectType === 'movie' ? detail.statusReason ?? null : null,
     episodeEditorId: detail.projectType === 'movie' ? detail.episodeEditorId ?? null : null,
     finalVideoUrl: detail.projectType === 'movie' ? detail.finalVideoUrl ?? null : null,
     pendingVideoUrl: detail.projectType === 'movie' ? detail.pendingVideoUrl ?? null : null,
@@ -122,14 +136,12 @@ export function applyEpisodeRowToCreationStore(store: CreationStore, episode: Us
     finalVideoUrl: episode.finalVideoUrl ?? null,
     pendingVideoUrl: episode.pendingVideoUrl ?? null,
     exportStatus: episode.exportStatus ?? null,
-    episodeStatus: episode.status ?? null
+    episodeStatus: episode.status ?? null,
+    episodeStatusReason: episode.statusReason ?? null
   })
 }
 
-let lastHydratedKey = ''
-
 export function resetProjectDetailHydrateCache(projectId?: number) {
-  lastHydratedKey = ''
   invalidateUserProjectDetailCache(projectId)
 }
 
@@ -155,8 +167,6 @@ export async function hydrateCreationStoreFromProjectDetail(
   if (options?.shouldApply && !options.shouldApply()) {
     return null
   }
-  lastHydratedKey = `${pid}:${detail.updateTime ?? detail.id}`
-
   applyProjectDetailToCreationStore(store, detail, pid)
   return detail
 }

@@ -291,7 +291,7 @@ export async function resumeStoryboardPromptGenerateTask(
 ): Promise<StoryboardPromptGenerateTaskOutcome> {
   await userTaskResume({ taskId })
   const outcome = await awaitStoryboardPromptGenerateTask(taskId)
-  if (import.meta.client) {
+  if ((typeof window !== 'undefined')) {
     window.dispatchEvent(new CustomEvent('create-flow-global-tasks-updated'))
   }
   return outcome

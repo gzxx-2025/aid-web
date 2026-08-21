@@ -1,6 +1,6 @@
 import type { DubbingPanel } from '~/types'
 import type { StoryboardRecordRow } from '~/types/business-api'
-import { isComposeStoryboardVideoRecord, resolveStoryboardRecordDisplayName } from '~/utils/storyboardRecordRow'
+import { isComposeStoryboardVideoRecord,resolveStoryboardRecordDisplayName } from '~/utils/storyboardRecordRow'
 
 export type DubbingGenHistoryItem = {
   id: string

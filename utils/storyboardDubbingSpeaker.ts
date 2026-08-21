@@ -1,5 +1,4 @@
-import type { UserStoryboardListRow, UserStoryboardSpeakerVoice } from '~/types/business-api'
-
+import type { UserStoryboardListRow,UserStoryboardSpeakerVoice } from '~/types/business-api'
 /** 发言角色展示：按出现顺序用顿号拼接 */
 export function formatStoryboardSpeakerRoles(roles: string[] | null | undefined): string {
   const list = (Array.isArray(roles) ? roles : [])

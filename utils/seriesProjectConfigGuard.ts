@@ -1,13 +1,28 @@
-import { userStoryboardList } from '~/utils/businessApi'
+import { userStoryboardList } from '~/utils/businessApi';
 
-/** 剧集已生成分镜脚本时，禁止修改项目配置的提示文案 */
-export const SERIES_PROJECT_CONFIG_STORYBOARD_BLOCKED_TIP =
-  '该剧集已经生成分镜脚本，请删除后重新修改项目配置'
+/** 剧集已生成分镜脚本时，项目配置弹窗内的锁定说明。 */
+export const SERIES_PROJECT_CONFIG_STORYBOARD_LOCKED_HINT =
+  '已有剧集生成分镜脚本，为避免现有内容与配置不一致，相关配置仅可查看；作品名称仍可修改。'
 
 export type SeriesStoryboardGuardResult =
   | { blocked: true; reason: 'has-storyboard' }
   | { blocked: true; reason: 'check-failed'; message: string }
   | { blocked: false }
+
+export type SeriesProjectConfigAccessMode = 'editable' | 'content-locked' | 'blocked'
+
+/**
+ * 分镜脚本只锁定会影响已生成内容的配置项，不应阻止用户打开弹窗查看配置。
+ * 状态检查失败时仍保持 fail-closed，避免误放开编辑。
+ */
+export function resolveSeriesProjectConfigAccess(result: SeriesStoryboardGuardResult): {
+  mode: SeriesProjectConfigAccessMode
+  message?: string
+} {
+  if (!result.blocked) return { mode: 'editable' }
+  if (result.reason === 'has-storyboard') return { mode: 'content-locked' }
+  return { mode: 'blocked', message: result.message }
+}
 
 /**
  * 校验项目下是否已有分镜脚本（用于「项目配置」入口）。

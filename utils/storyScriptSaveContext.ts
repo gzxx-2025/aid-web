@@ -1,5 +1,5 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type { UserProjectType } from '~/types/business-api'
+import type { RouteLikeLocation } from '~/types/routeLike'
 import { fetchUserProjectDetailOnce } from '~/utils/userProjectDetailOnce'
 
 type CreationLike = {
@@ -12,7 +12,7 @@ type CreationLike = {
 /** 从 URL 或 Pinia 解析作品 ID（与 resolveStoryScriptSaveContext 一致：URL 优先） */
 export function resolveProjectIdFromRouteAndStore(
   store: Pick<CreationLike, 'currentProjectId'>,
-  route: RouteLocationNormalizedLoaded
+  route: RouteLikeLocation
 ): number | null {
   const routeProjectIdRaw = Number(route.query.projectId ?? route.query.id ?? route.query.workId)
   const routeProjectId = Number.isFinite(routeProjectIdRaw) && routeProjectIdRaw > 0 ? routeProjectIdRaw : null
@@ -21,7 +21,7 @@ export function resolveProjectIdFromRouteAndStore(
   return routeProjectId ?? storeProjectId
 }
 
-function parseRouteEpisodeId(route: RouteLocationNormalizedLoaded): number | null {
+function parseRouteEpisodeId(route: RouteLikeLocation): number | null {
   const raw = route.query.episodeId
   if (raw === undefined || raw === '') return null
   const n = Number(raw)
@@ -36,7 +36,7 @@ function parseRouteEpisodeId(route: RouteLocationNormalizedLoaded): number | nul
  */
 export async function resolveStoryScriptSaveContext(
   store: CreationLike,
-  route: RouteLocationNormalizedLoaded
+  route: RouteLikeLocation
 ): Promise<{ projectId: number; episodeId: number } | null> {
   const projectId = resolveProjectIdFromRouteAndStore(store, route)
   if (!projectId) return null

@@ -22,7 +22,7 @@ export function persistSceneImageModalGenSession(
   extra?: { taskKind?: string; imageIdx?: number; taskId?: number },
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   const scope = String(editorScopeKey || '').trim()
   if (!scope) return
   try {
@@ -55,7 +55,7 @@ export function markSceneImageModalUserDismissed(
   editorScopeKey: string,
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   const scope = String(editorScopeKey || '').trim()
   if (!scope) return
   try {
@@ -74,7 +74,7 @@ export function isSceneImageModalUserDismissed(
   editorScopeKey: string,
   sessionScope?: ModalGenSessionScope | null
 ): boolean {
-  if (!import.meta.client) return false
+  if (!(typeof window !== 'undefined')) return false
   const scope = String(editorScopeKey || '').trim()
   if (!scope) return false
   try {
@@ -87,7 +87,7 @@ export function isSceneImageModalUserDismissed(
 export function readSceneImageModalGenSession(
   sessionScope?: ModalGenSessionScope | null
 ): SceneImageModalGenSession | null {
-  if (!import.meta.client) return null
+  if (!(typeof window !== 'undefined')) return null
   try {
     const raw = readScopedSessionItem(SCENE_IMAGE_MODAL_GEN_SESSION_KEY, sessionScope)
     if (!raw) return null

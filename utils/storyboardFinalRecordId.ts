@@ -1,6 +1,6 @@
-import type { DubbingPanel } from '~/types'
-import type { StoryboardRecordRow } from '~/types/business-api'
-import { isOriginalStoryboardVideoRecord } from '~/utils/storyboardRecordRow'
+import type { DubbingPanel } from '~/types';
+import type { StoryboardRecordRow } from '~/types/business-api';
+import { isOriginalStoryboardVideoRecord } from '~/utils/storyboardRecordRow';
 
 /** 从分镜视频条目解析服务端 recordId（用于 unSetFinalVideo） */
 export function resolveStoryboardVideoRecordId(

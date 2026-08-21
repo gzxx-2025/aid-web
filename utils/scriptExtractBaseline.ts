@@ -3,10 +3,10 @@
  * @see docs/superpowers/specs/2026-07-29-script-change-continue-extract-design.md
  */
 import {
-  buildScriptChangeKey,
-  isMeaningfulScriptChange,
-  normalizeScriptContent
-} from './scriptContentFingerprint.ts'
+buildScriptChangeKey,
+isMeaningfulScriptChange,
+normalizeScriptContent
+} from './scriptContentFingerprint'
 
 export type ScriptExtractBaseline = {
   projectId: number

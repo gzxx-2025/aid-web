@@ -1,5 +1,4 @@
-import type { UserTaskDetailData, UserTaskRow } from '~/types/business-api'
-
+import type { UserTaskDetailData,UserTaskRow } from '~/types/business-api'
 export type StoryboardGenerationMedia = 'image' | 'video'
 export type StoryboardGenerationTaskOwner = 'batch' | 'modal'
 export type StoryboardVideoGenerationTaskKind = 'i2v' | 'multi' | 'edge' | 'grid'

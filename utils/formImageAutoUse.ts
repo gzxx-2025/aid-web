@@ -1,16 +1,15 @@
-import { userAssetRpsFormUse, userAssetRpsFormUnuse } from '~/utils/businessApi'
 import { useCreationStore } from '~/stores/creation'
-import { normUserTaskType } from '~/utils/taskPartialFailed'
 import type { UserAssetRpsFormUseBatchData } from '~/types/business-api'
+import { userAssetRpsFormUnuse,userAssetRpsFormUse } from '~/utils/businessApi'
+import { normUserTaskType } from '~/utils/taskPartialFailed'
 
-/** 形态图生成完成后需主动调 /form/use 设为使用中的任务类型（与后端约定一致） */
+/** 形态图生成完成后需主动调 /form/use 设为使用中的任务类型（设定卡批量任务由后端决定初始状态） */
 export const FORM_IMAGE_AUTO_USE_TASK_TYPES = new Set([
   'form_image',
   'form_image_batch',
   'form_multi_view',
   'form_multi_grid',
   'form_card_image',
-  'form_card_image_batch',
   'form_edit_chat'
 ])
 
@@ -190,7 +189,8 @@ const FORM_USE_BATCH_MAX = 50
 export function resolveFormUseProjectId(explicit?: number): number | null {
   if (explicit != null && Number.isFinite(explicit) && explicit > 0) return explicit
   try {
-    const store = useCreationStore()
+    // 非组件上下文，必须走 getState() 而不是 hook 调用
+    const store = useCreationStore.getState()
     const pid = Number(store.currentProjectId)
     return Number.isFinite(pid) && pid > 0 ? pid : null
   } catch {
@@ -309,10 +309,71 @@ export async function claimFormImagesFromTaskComplete(
   options?: { projectId?: number }
 ): Promise<number[]> {
   if (!isFormImageAutoUseTaskType(taskType)) return []
-  const imageIds = isFormCardImageTaskType(taskType)
-    ? extractSettingCardImageIdsFromTaskCompleteData(completeData)
-    : extractImageIdsFromTaskCompleteData(completeData)
+  const imageIds = extractFormImageAutoUseIds(taskType, completeData)
   if (!imageIds.length) return []
   const { successIds } = await claimFormImagesByIds(imageIds, options)
   return successIds
+}
+
+export function extractFormImageAutoUseIds(taskType: unknown, completeData: unknown): number[] {
+  if (!isFormImageAutoUseTaskType(taskType)) return []
+  return isFormCardImageTaskType(taskType)
+    ? extractSettingCardImageIdsFromTaskCompleteData(completeData)
+    : extractImageIdsFromTaskCompleteData(completeData)
+}
+
+type FormImageTaskClaimState = {
+  claimedIds: Set<number>
+  tail: Promise<void>
+}
+
+/**
+ * 单个任务消费方的形态图接管 owner。
+ * SSE progress 与 terminal 可能携带同一批 imageId；同 owner 串行消费并只跳过已成功接管的 id，
+ * 若前一次请求失败，后续 terminal 仍会重试，不会吞掉失败恢复。
+ */
+export function createFormImageTaskClaimOwner() {
+  const stateByTaskId = new Map<number, FormImageTaskClaimState>()
+  const maxRetainedTasks = 100
+
+  const trimSettledTasks = () => {
+    while (stateByTaskId.size > maxRetainedTasks) {
+      const oldestTaskId = stateByTaskId.keys().next().value as number | undefined
+      if (oldestTaskId == null) return
+      stateByTaskId.delete(oldestTaskId)
+    }
+  }
+
+  return {
+    claim: async (
+      taskId: unknown,
+      taskType: unknown,
+      completeData: unknown,
+      options?: { projectId?: number }
+    ) => {
+      const id = Number(taskId)
+      const imageIds = extractFormImageAutoUseIds(taskType, completeData)
+      if (!Number.isFinite(id) || id <= 0 || imageIds.length === 0) return []
+
+      let state = stateByTaskId.get(id)
+      if (!state) {
+        state = { claimedIds: new Set<number>(), tail: Promise.resolve() }
+        stateByTaskId.set(id, state)
+        trimSettledTasks()
+      }
+
+      const currentState = state
+      const run = currentState.tail
+        .catch(() => undefined)
+        .then(async () => {
+          const pendingIds = imageIds.filter((imageId) => !currentState.claimedIds.has(imageId))
+          if (pendingIds.length === 0) return
+          const { successIds } = await claimFormImagesByIds(pendingIds, options)
+          for (const successId of successIds) currentState.claimedIds.add(successId)
+        })
+      currentState.tail = run
+      await run
+      return imageIds.filter((imageId) => currentState.claimedIds.has(imageId))
+    }
+  }
 }

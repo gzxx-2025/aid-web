@@ -1,8 +1,8 @@
-import { resolveSameOriginApiUrl } from '~/utils/sameOriginApiUrl'
 import {
-  isRejectedMediaContentType,
-  isUsableMediaBlob
+isRejectedMediaContentType,
+isUsableMediaBlob
 } from '~/utils/mediaBlobGuard'
+import { resolveSameOriginApiUrl } from '~/utils/sameOriginApiUrl'
 
 function isSameOriginUrl(url: string): boolean {
   if (typeof window === 'undefined') return true
@@ -52,7 +52,7 @@ async function tryFetchMediaBlob(href: string, init?: RequestInit): Promise<Blob
 
 /**
  * 拉取媒体 Blob。跨域 CDN 优先走同源 `/media/proxy`；
- * 代理不可用（如 generate 静态部署缺 Nitro 路由）时回退直连 CORS，避免把 HTML 当 MP4 喂给 WebAV。
+ * 代理不可用（如纯静态部署不运行 Next Proxy）时回退直连 CORS，避免把 HTML 当 MP4 喂给 WebAV。
  */
 export async function fetchMediaBlob(url: string): Promise<Blob | null> {
   const remote = String(url || '').trim()

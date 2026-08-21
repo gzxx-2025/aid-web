@@ -1,7 +1,6 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
-import type { Step4PlusLiveGenSnapshot, useCreationStore } from '~/stores/creation'
 import { resolveCurrentStep4LiveGenScopeBlobs } from '~/composables/useCreationStoreHydration'
-
+import type { Step4PlusLiveGenSnapshot,useCreationStore } from '~/stores/creation'
+import type { RouteLikeLocation } from '~/types/routeLike'
 function hasPositiveTaskId(raw: unknown): boolean {
   const n = Number(raw)
   return Number.isFinite(n) && n > 0
@@ -75,7 +74,7 @@ export function step4ScopeBlobHasVideoBatchGenWork(blob: Step4PlusLiveGenSnapsho
 
 export function hasPersistedStoryboardScriptBatchGenWork(
   store: ReturnType<typeof useCreationStore>,
-  route?: RouteLocationNormalizedLoaded
+  route?: RouteLikeLocation
 ): boolean {
   for (const { blob } of resolveCurrentStep4LiveGenScopeBlobs(store, route)) {
     if (step4ScopeBlobHasScriptBatchGenWork(blob)) return true
@@ -85,7 +84,7 @@ export function hasPersistedStoryboardScriptBatchGenWork(
 
 export function hasPersistedStoryboardImageBatchGenWork(
   store: ReturnType<typeof useCreationStore>,
-  route?: RouteLocationNormalizedLoaded
+  route?: RouteLikeLocation
 ): boolean {
   /** 剧集隔离：只看当前 scope（含 null/0 别名），禁止跨 episode 桶判定，避免他集任务把本集判成生成中 */
   for (const { blob } of resolveCurrentStep4LiveGenScopeBlobs(store, route)) {
@@ -96,7 +95,7 @@ export function hasPersistedStoryboardImageBatchGenWork(
 
 export function hasPersistedStoryboardVideoBatchGenWork(
   store: ReturnType<typeof useCreationStore>,
-  route?: RouteLocationNormalizedLoaded
+  route?: RouteLikeLocation
 ): boolean {
   for (const { blob } of resolveCurrentStep4LiveGenScopeBlobs(store, route)) {
     if (step4ScopeBlobHasVideoBatchGenWork(blob)) return true

@@ -1,9 +1,9 @@
 import {
-  fetchUserTaskDetailOnce,
-  isTerminalTaskStatus
+fetchUserTaskDetailOnce,
+isTerminalTaskStatus
 } from '~/composables/useTaskSseFollow'
-import { userAssetCenterDetail, userComposeStatus } from '~/utils/businessApi'
 import type { StoryboardDubbingGenTaskSnapshot } from '~/stores/creation'
+import { userAssetCenterDetail,userComposeStatus } from '~/utils/businessApi'
 import type { StoryboardDubbingModalGenSession } from '~/utils/storyboardDubbingModalGenSession'
 
 function normalizeComposeStatus(status: string | null | undefined): string {

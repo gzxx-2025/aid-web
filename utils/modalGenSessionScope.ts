@@ -50,7 +50,7 @@ function readSessionRaw(
   legacyKey: string,
   scope?: ModalGenSessionScope | null
 ): string | null {
-  if (!import.meta.client) return null
+  if (!(typeof window !== 'undefined')) return null
   try {
     const scoped = sessionStorage.getItem(scopedKey)
     if (scoped) return scoped
@@ -91,7 +91,7 @@ export function writeScopedSessionItem(
   value: string,
   scope?: ModalGenSessionScope | null
 ): void {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     sessionStorage.setItem(modalGenSessionStorageKey(baseKey, scope), value)
     if (scope?.projectId != null && Number(scope.projectId) > 0) {
@@ -106,7 +106,7 @@ export function removeScopedSessionItem(
   baseKey: string,
   scope?: ModalGenSessionScope | null
 ): void {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     sessionStorage.removeItem(modalGenSessionStorageKey(baseKey, scope))
     if (!scope?.projectId) {

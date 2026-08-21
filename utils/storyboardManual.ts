@@ -1,6 +1,6 @@
 import { parseServerStoryboardId } from '~/composables/useStoryboardWorkbenchMutations'
-import type { StoryboardPanel } from '~/types'
 import type { useCreationStore } from '~/stores/creation'
+import type { StoryboardPanel } from '~/types'
 
 type CreationStore = ReturnType<typeof useCreationStore>
 

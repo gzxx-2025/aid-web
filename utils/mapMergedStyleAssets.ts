@@ -1,11 +1,12 @@
 import {
-  buildStyleLibraryCardId,
-  type StyleLibraryCard
+buildStyleLibraryCardId,
+type StyleLibraryCard
 } from '~/composables/usePromptDictionary'
 import type { MergedAssetVO } from '~/types/business-api'
 import { isMergedAssetOfficial } from '~/utils/mergedAssetSource'
 
-export const STYLE_LIBRARY_PAGE_SIZE = 54
+/** 创建/配置入口首屏仅读取 30 个推荐优先的常用风格。 */
+export const STYLE_LIBRARY_PAGE_SIZE = 30
 /** 精选角标：官方列表前 N 条 */
 export const STYLE_LIBRARY_FEATURED_BADGE_COUNT = 3
 

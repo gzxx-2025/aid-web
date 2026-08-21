@@ -47,7 +47,7 @@ export function persistModalImageGenSession(
   },
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   const resolvedScope = resolveSessionScope(scopeKey, sessionScope)
   try {
     const prev = readModalImageGenSession(resolvedScope)
@@ -86,7 +86,7 @@ export function markModalImageGenUserDismissed(
   storyboardId: number,
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     writeScopedSessionItem(
       STORYBOARD_IMAGE_MODAL_DISMISSED_KEY,
@@ -107,7 +107,7 @@ export function isModalImageGenUserDismissed(
   storyboardId: number,
   sessionScope?: ModalGenSessionScope | null
 ): boolean {
-  if (!import.meta.client) return false
+  if (!(typeof window !== 'undefined')) return false
   try {
     return (
       readScopedSessionItem(STORYBOARD_IMAGE_MODAL_DISMISSED_KEY, sessionScope) ===
@@ -122,7 +122,7 @@ export function isModalImageGenSessionActive(
   storyboardId?: number | null,
   sessionScope?: ModalGenSessionScope | null
 ): boolean {
-  if (!import.meta.client) return false
+  if (!(typeof window !== 'undefined')) return false
   const session = readModalImageGenSession(sessionScope)
   if (!session) return false
   // session 正文含 scopeKey 时，必须与当前作品 scope 一致，防止跨作品误亮 loading
@@ -148,7 +148,7 @@ export function clearModalPanelLoadingForActiveSession(
   clearStatus: (storyboardId: number) => void,
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   const session = readModalImageGenSession(sessionScope)
   if (!session || isModalImageGenUserDismissed(session.storyboardId, sessionScope)) return
   clearStatus(session.storyboardId)
@@ -159,7 +159,7 @@ export function syncModalPanelLoadingForActiveSession(
   syncStatus: (storyboardId: number) => void,
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   const session = readModalImageGenSession(sessionScope)
   if (!session || isModalImageGenUserDismissed(session.storyboardId, sessionScope)) return
   syncStatus(session.storyboardId)
@@ -168,7 +168,7 @@ export function syncModalPanelLoadingForActiveSession(
 export function readModalImageGenSession(
   sessionScope?: ModalGenSessionScope | null
 ): ModalImageGenSession | null {
-  if (!import.meta.client) return null
+  if (!(typeof window !== 'undefined')) return null
   try {
     const raw = readScopedSessionItem(STORYBOARD_IMAGE_MODAL_GEN_SESSION_KEY, sessionScope)
     if (!raw) return null

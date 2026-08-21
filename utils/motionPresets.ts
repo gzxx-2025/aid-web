@@ -20,7 +20,7 @@ export type MotionGsap = typeof import('gsap').gsap
 type MotionTarget = string | Element | Element[] | NodeListOf<Element>
 
 export function prefersReducedMotion(): boolean {
-  if (!import.meta.client) return true
+  if (!(typeof window !== 'undefined')) return true
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 

@@ -1,8 +1,8 @@
 /**
  * 接口信封加密（AES-GCM-256 + RSA-OAEP-SHA256），与 `components/steps/接口.md` v2.59.0 对齐。
  */
-import { ungzip } from 'pako'
 import type { InternalAxiosRequestConfig } from 'axios'
+import { ungzip } from 'pako'
 import type { AuthCryptoPublicConfig } from '~/types/business-api'
 
 const AES_GCM_IV_BYTES = 12
@@ -154,7 +154,7 @@ export async function prepareEncryptedRequest(options: {
   body?: unknown
   skipBody?: boolean
 }): Promise<PreparedEncryptedRequest> {
-  if (!import.meta.client) throw new Error('信封加密仅支持浏览器环境')
+  if (!(typeof window !== 'undefined')) throw new Error('信封加密仅支持浏览器环境')
   const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
   const rawAes = await crypto.subtle.exportKey('raw', aesKey)
   const rsaPub = await importRsaPublicKey()
@@ -237,7 +237,7 @@ export async function maybeDecryptApiPayload<T = unknown>(
 
 /** 从 sessionStorage 恢复加密配置（与 useAuthPublicConfig 缓存键一致） */
 export function hydrateApiCryptoFromSessionCache(): void {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     const raw = sessionStorage.getItem('auth:public-config:v3')
     if (!raw) return
@@ -248,6 +248,6 @@ export function hydrateApiCryptoFromSessionCache(): void {
   }
 }
 
-if (import.meta.client) {
+if ((typeof window !== 'undefined')) {
   hydrateApiCryptoFromSessionCache()
 }

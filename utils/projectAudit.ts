@@ -130,45 +130,26 @@ export function projectPublicLockUserHint(): string {
   return '作品已公开，请先在作品库关闭公开后再修改'
 }
 
+/** 作品卡片审核态只展示后端定义的三种审核结果。发布态由 isPublic 独立表达。 */
+export function auditStatusBadgeLabel(status?: number | null): string | null {
+  if (status === 3) return '审核中'
+  if (status === 5) return '审核失败'
+  if (status === 4) return '审核通过'
+  return null
+}
+
+export type AuditBadgeTone = 'reviewing' | 'failed' | 'passed'
+
+export function auditStatusBadgeTone(status?: number | null): AuditBadgeTone | null {
+  if (status === 3) return 'reviewing'
+  if (status === 5) return 'failed'
+  if (status === 4) return 'passed'
+  return null
+}
+
 /** 项目是否仍发布在案例广场；兼容接口可能返回的字符串、数字或布尔值。 */
 export function isProjectPublished(isPublic: unknown): boolean {
   return isPublic === true || String(isPublic ?? '').trim() === '1'
-}
-
-export function exportStatusBadgeLabel(exportStatus?: number | null): string | null {
-  switch (exportStatus) {
-    case 1:
-      return '合成中'
-    case 2:
-      return '已合成'
-    case 3:
-      return '合成失败'
-    default:
-      return null
-  }
-}
-
-/** 作品卡片左上角审核态文案：3 审核中 / 4 已发布或审核通过 / 5 审核失败 */
-export function auditStatusBadgeLabel(
-  status?: number | null,
-  isPublic?: string | null
-): string | null {
-  if (status === 3) return '审核中'
-  if (status === 5) return '审核失败'
-  if (status === 4) return isProjectPublished(isPublic) ? '已发布' : '审核通过'
-  return null
-}
-
-export type AuditBadgeTone = 'reviewing' | 'failed' | 'published' | 'passed'
-
-export function auditStatusBadgeTone(
-  status?: number | null,
-  isPublic?: string | null
-): AuditBadgeTone | null {
-  if (status === 3) return 'reviewing'
-  if (status === 5) return 'failed'
-  if (status === 4) return isProjectPublished(isPublic) ? 'published' : 'passed'
-  return null
 }
 
 /** 导出成功后的可播放地址：重新导出过审场景优先预览待审新片 */

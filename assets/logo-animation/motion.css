@@ -1,0 +1,95 @@
+:root {
+  --p2m-draw-duration: 520ms;
+  --p2m-draw-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --p2m-fill-ease: cubic-bezier(0, 0, 0.2, 1);
+}
+
+#logo-root svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  text-rendering: geometricPrecision;
+}
+
+#letter-a,
+#letter-i,
+#letter-d,
+#letter-d-inner {
+  fill: transparent;
+  stroke: #ffffff;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+#logo-root.is-complete #letter-a,
+#logo-root.is-complete #letter-i,
+#logo-root.is-complete #letter-d,
+#logo-root.is-complete #letter-d-inner {
+  fill: #ffffff;
+  stroke: transparent;
+  stroke-dashoffset: 0;
+}
+
+#logo-root.is-drawing #letter-a {
+  animation:
+    p2m-draw var(--p2m-draw-duration) var(--p2m-draw-ease) forwards,
+    p2m-fill 160ms var(--p2m-fill-ease) forwards;
+  animation-delay: 0ms, calc(var(--p2m-draw-duration) - 40ms);
+}
+
+#logo-root.is-drawing #letter-i {
+  animation:
+    p2m-draw var(--p2m-draw-duration) var(--p2m-draw-ease) forwards,
+    p2m-fill 160ms var(--p2m-fill-ease) forwards;
+  animation-delay: 120ms, calc(120ms + var(--p2m-draw-duration) - 40ms);
+}
+
+#logo-root.is-drawing #letter-d {
+  animation:
+    p2m-draw var(--p2m-draw-duration) var(--p2m-draw-ease) forwards,
+    p2m-fill 160ms var(--p2m-fill-ease) forwards;
+  animation-delay: 240ms, calc(240ms + var(--p2m-draw-duration) - 40ms);
+}
+
+#logo-root.is-drawing #letter-d-inner {
+  animation:
+    p2m-draw var(--p2m-draw-duration) var(--p2m-draw-ease) forwards,
+    p2m-fill 160ms var(--p2m-fill-ease) forwards;
+  animation-delay: 360ms, calc(360ms + var(--p2m-draw-duration) - 40ms);
+}
+
+#logo-root:focus-visible {
+  outline: 2px solid rgba(74, 231, 253, 0.45);
+  outline-offset: 6px;
+  border-radius: 8px;
+}
+
+@keyframes p2m-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes p2m-fill {
+  to {
+    fill: #ffffff;
+    stroke: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #letter-a,
+  #letter-i,
+  #letter-d,
+  #letter-d-inner {
+    fill: #ffffff;
+    stroke: transparent;
+    stroke-dashoffset: 0;
+    animation: none !important;
+  }
+}

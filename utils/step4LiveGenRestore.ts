@@ -1,4 +1,4 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
+import type { RouteLikeLocation } from '~/types/routeLike'
 import {
   fetchUserTaskDetailOnce,
   isTerminalTaskStatus
@@ -54,7 +54,7 @@ function clearPanelGeneratingForTargets(
  */
 export async function purgeTerminalStep4LiveGenTasks(
   store: CreationStore,
-  route?: RouteLocationNormalizedLoaded
+  route?: RouteLikeLocation
 ): Promise<void> {
   const candidates = resolveCurrentStep4LiveGenScopeBlobs(store, route)
   const taskIds = new Set<number>()

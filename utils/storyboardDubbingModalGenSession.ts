@@ -1,9 +1,9 @@
 import {
-  type ModalGenSessionScope,
-  modalGenSessionScopeFromScopeKey,
-  readScopedSessionItem,
-  removeScopedSessionItem,
-  writeScopedSessionItem
+type ModalGenSessionScope,
+modalGenSessionScopeFromScopeKey,
+readScopedSessionItem,
+removeScopedSessionItem,
+writeScopedSessionItem
 } from '~/utils/modalGenSessionScope'
 
 export const STORYBOARD_DUBBING_MODAL_GEN_SESSION_KEY = 'storyboard-dubbing-modal-gen-session'
@@ -32,7 +32,7 @@ export function persistStoryboardDubbingModalGenSession(
   },
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     const resolvedScope = modalGenSessionScopeFromScopeKey(scopeKey ?? '') ?? sessionScope
     const prev = readStoryboardDubbingModalGenSession(resolvedScope)
@@ -77,7 +77,7 @@ export function markStoryboardDubbingModalUserDismissed(
   storyboardId: number,
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     writeScopedSessionItem(
       STORYBOARD_DUBBING_MODAL_DISMISSED_KEY,
@@ -100,7 +100,7 @@ export function isStoryboardDubbingModalUserDismissed(
   storyboardId: number,
   sessionScope?: ModalGenSessionScope | null
 ): boolean {
-  if (!import.meta.client) return false
+  if (!(typeof window !== 'undefined')) return false
   try {
     return (
       readScopedSessionItem(STORYBOARD_DUBBING_MODAL_DISMISSED_KEY, sessionScope) ===
@@ -114,7 +114,7 @@ export function isStoryboardDubbingModalUserDismissed(
 export function readStoryboardDubbingModalGenSession(
   sessionScope?: ModalGenSessionScope | null
 ): StoryboardDubbingModalGenSession | null {
-  if (!import.meta.client) return null
+  if (!(typeof window !== 'undefined')) return null
   try {
     const raw = readScopedSessionItem(STORYBOARD_DUBBING_MODAL_GEN_SESSION_KEY, sessionScope)
     if (!raw) return null
@@ -151,7 +151,7 @@ export function isStoryboardDubbingModalGenSessionActive(
   storyboardId?: number | null,
   sessionScope?: ModalGenSessionScope | null
 ): boolean {
-  if (!import.meta.client) return false
+  if (!(typeof window !== 'undefined')) return false
   const session = readStoryboardDubbingModalGenSession(sessionScope)
   if (!session) return false
   if (storyboardId != null) {
@@ -165,7 +165,7 @@ export function isStoryboardDubbingModalGenSessionActive(
 
 /** 配音 compose 任务终态（成功/失败/已结束）后通知弹窗同步清除 loading */
 export function notifyStoryboardDubbingGenSettled(storyboardId: number, scopeKey?: string) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   window.dispatchEvent(
     new CustomEvent('storyboard-dubbing-gen-settled', {
       detail: { storyboardId: Number(storyboardId), scopeKey: String(scopeKey || '') }

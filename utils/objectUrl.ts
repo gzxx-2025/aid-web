@@ -15,10 +15,10 @@ export function revokeObjectUrl(url: string | null | undefined): void {
 }
 
 /** 在同步使用 ObjectURL 后立即释放（如下载链接 click） */
-export function withObjectUrl(blob: Blob, use: (url: string) => void): void {
+export function withObjectUrl(blob: Blob, consume: (url: string) => void): void {
   const url = createTrackedObjectUrl(blob)
   try {
-    use(url)
+    consume(url)
   } finally {
     revokeObjectUrl(url)
   }

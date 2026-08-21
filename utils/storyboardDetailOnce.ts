@@ -1,5 +1,5 @@
-import type { UserStoryboardListRow } from '~/types/business-api'
-import { userStoryboardDetail } from '~/utils/businessApi'
+import type { UserStoryboardListRow } from '~/types/business-api';
+import { userStoryboardDetail } from '~/utils/businessApi';
 
 const inflightByStoryboardId = new Map<number, Promise<UserStoryboardListRow>>()
 const resultCache = new Map<number, { at: number; row: UserStoryboardListRow }>()

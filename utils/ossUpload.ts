@@ -3,12 +3,12 @@
  * 接口见 components/steps/接口.md：/api/user/oss/upload（统一单/多文件入口）
  * 上传前按 /auth/public-config 的 upload 块做本地大小/扩展名校验。
  */
-import { message } from 'ant-design-vue'
-import { useAuthPublicConfig } from '~/composables/useAuthPublicConfig'
-import { ossRemoteUploadImages, ossRemoteUploadSingle } from '~/utils/businessApi'
+import { message } from 'antd'
+import { loadPublicConfig } from '~/composables/useAuthPublicConfig'
+import { ossRemoteUploadImages,ossRemoteUploadSingle } from '~/utils/businessApi'
 import {
-  assertFilesAgainstUploadLimits,
-  checkFileAgainstUploadLimits
+assertFilesAgainstUploadLimits,
+checkFileAgainstUploadLimits
 } from '~/utils/uploadLimitCheck'
 
 export const OSS_DIR = {
@@ -20,11 +20,8 @@ export const OSS_DIR = {
 } as const
 
 async function resolveUploadConfig() {
-  const { config, loadPublicConfig } = useAuthPublicConfig()
-  if (!config.value?.upload) {
-    await loadPublicConfig()
-  }
-  return config.value?.upload ?? null
+  const config = await loadPublicConfig()
+  return config?.upload ?? null
 }
 
 async function guardUploadFiles(files: File[]): Promise<boolean> {
@@ -97,7 +94,7 @@ export async function uploadAudioToOssWithToast(file: File): Promise<string | nu
   }
 }
 
-export async function uploadFileToOssWithToast(file: File, customDir = OSS_DIR.files): Promise<string | null> {
+export async function uploadFileToOssWithToast(file: File, customDir: string = OSS_DIR.files): Promise<string | null> {
   const upload = await resolveUploadConfig()
   const check = checkFileAgainstUploadLimits(file, upload)
   if (check.ok === false) {

@@ -1,5 +1,5 @@
-import type { UserProjectRow } from '~/types/business-api'
-import { userProjectDetail } from '~/utils/businessApi'
+import type { UserProjectRow } from '~/types/business-api';
+import { userProjectDetail } from '~/utils/businessApi';
 
 const inflightByProjectId = new Map<number, Promise<UserProjectRow>>()
 const resultCache = new Map<number, { at: number; row: UserProjectRow }>()

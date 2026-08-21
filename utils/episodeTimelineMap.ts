@@ -5,9 +5,17 @@ import type {
   TimelineData,
   TimelineSegment,
   TimelineBgm,
-  TimedSubtitleCue,
-  EpisodeExportComposeGroup
+  TimedSubtitleCue
 } from '~/types/business-api'
+import type {
+  PreviewAudioItem,
+  PreviewSubtitleItem,
+  PreviewTimelineUiState,
+  PreviewVideoClip
+} from './episodeTimelineTypes'
+
+export * from './episodeTimelineTypes'
+export { mapTimelineToExportGroups } from './episodeTimelineExportGroups'
 
 /** 可持久化/导出的媒体 URL（排除 blob、以及历史 `cdn/blob:` 脏数据） */
 function persistableMediaUrl(url: unknown): string {
@@ -16,70 +24,6 @@ function persistableMediaUrl(url: unknown): string {
   if (/^(blob:|data:)/i.test(raw)) return ''
   if (/\/blob:/i.test(raw)) return ''
   return raw
-}
-
-export type PreviewVideoClip = {
-  id: string
-  kind: 'video'
-  name: string
-  url: string
-  start: number
-  duration: number
-  sourceDuration: number
-  trimStart: number
-  trimEnd: number
-  storyboardId?: number | null
-  genRecordId?: number | null
-}
-
-export type PreviewAudioItem = {
-  id: string
-  kind: 'voice' | 'music'
-  name: string
-  url: string
-  start: number
-  duration: number
-  videoClipId?: string
-  sourceDuration?: number
-  volume: number
-  fadeIn: number
-  fadeOut: number
-  loop: boolean
-  volumeCurve: number[]
-  audioRecordId?: number | null
-  ttsText?: string | null
-  voiceLibraryId?: number | null
-  voiceModelId?: number | null
-  timbreCode?: string | null
-  voiceName?: string | null
-}
-
-export type PreviewSubtitleItem = {
-  id: string
-  kind: 'subtitle'
-  text: string
-  start: number
-  duration: number
-  videoClipId?: string
-  fontSize: number
-  fontColor?: string
-  show?: boolean
-  cue?: TimedSubtitleCue
-  sourceMediaFingerprint?: string | null
-  sourceDialogueFingerprint?: string | null
-  recognitionStatus?: string | null
-  recognitionProvider?: string | null
-  recognitionUpdatedAt?: string | null
-  recognitionError?: string | null
-}
-
-export type PreviewTimelineUiState = {
-  videoClips: PreviewVideoClip[]
-  voiceItems: PreviewAudioItem[]
-  subtitleItems: PreviewSubtitleItem[]
-  musicItems: PreviewAudioItem[]
-  videoVolumePreset: Record<string, number>
-  resolution: string
 }
 
 function num(v: unknown, fallback = 0): number {
@@ -473,6 +417,9 @@ export function mapUiTimelineToServer(
 
     const cues = buildTimedSubtitleCues(subs, clip)
     const metaSub = subs.find((item) => item.sourceMediaFingerprint || item.recognitionStatus || item.cue)
+    // 无人声分镜没有 cues，但 TEXT_FALLBACK 是后端可复用检查点，必须随时间轴原样回传。
+    const keepRecognitionCheckpoint =
+      cues.length > 0 || metaSub?.recognitionStatus === 'TEXT_FALLBACK'
     const subtitleItem: TimelineSegment['subtitle'] = sub
       ? {
           text: subtitleTextFromItems(subs, prev?.subtitle?.text),
@@ -482,22 +429,22 @@ export function mapUiTimelineToServer(
           position: prev?.subtitle?.position || 'bottom',
           show: subs.some((item) => item.show !== false),
           cues: cues.length ? cues : null,
-          sourceMediaFingerprint: cues.length
+          sourceMediaFingerprint: keepRecognitionCheckpoint
             ? (metaSub?.sourceMediaFingerprint ?? prev?.subtitle?.sourceMediaFingerprint ?? null)
             : null,
-          sourceDialogueFingerprint: cues.length
+          sourceDialogueFingerprint: keepRecognitionCheckpoint
             ? (metaSub?.sourceDialogueFingerprint ?? prev?.subtitle?.sourceDialogueFingerprint ?? null)
             : null,
-          recognitionStatus: cues.length
+          recognitionStatus: keepRecognitionCheckpoint
             ? (metaSub?.recognitionStatus ?? prev?.subtitle?.recognitionStatus ?? null)
             : null,
-          recognitionProvider: cues.length
+          recognitionProvider: keepRecognitionCheckpoint
             ? (metaSub?.recognitionProvider ?? prev?.subtitle?.recognitionProvider ?? null)
             : null,
-          recognitionUpdatedAt: cues.length
+          recognitionUpdatedAt: keepRecognitionCheckpoint
             ? (metaSub?.recognitionUpdatedAt ?? prev?.subtitle?.recognitionUpdatedAt ?? null)
             : null,
-          recognitionError: cues.length
+          recognitionError: keepRecognitionCheckpoint
             ? (metaSub?.recognitionError ?? prev?.subtitle?.recognitionError ?? null)
             : null
         }
@@ -536,55 +483,4 @@ export function mapUiTimelineToServer(
     bgm,
     extraJson: opts.previous?.extraJson ?? null
   }
-}
-
-/** 服务端 timeline → 导出 groups（扁平 map，无深层嵌套） */
-export function mapTimelineToExportGroups(timeline: TimelineData): {
-  groups: EpisodeExportComposeGroup[]
-  globalBgmUrl?: string
-} {
-  const segments = Array.isArray(timeline.segments) ? timeline.segments : []
-  const storyboardIds = new Set<number>()
-  const groups: EpisodeExportComposeGroup[] = segments
-    .filter((s) => String(s.video?.url || '').trim())
-    .map((s) => {
-      const storyboardId = Number(s.storyboardId)
-      if (!Number.isInteger(storyboardId) || storyboardId <= 0) {
-        throw new Error('分镜数据异常，请重新初始化时间线')
-      }
-      if (storyboardIds.has(storyboardId)) {
-        throw new Error('分镜数据重复，请重新初始化时间线')
-      }
-      storyboardIds.add(storyboardId)
-      const videoUrl = String(s.video.url).trim()
-      const videoDur = Math.max(0.01, num(s.video.durationSeconds, 0.01))
-      const audioUrl = String(s.voice?.url || '').trim()
-      const audioDur = audioUrl
-        ? Math.max(0.01, num(s.voice?.durationSeconds, videoDur))
-        : 0
-      const timelineSubtitle = s.subtitle
-      const subtitle = timelineSubtitle?.show === false ? null : String(timelineSubtitle?.text || '').trim() || null
-      const subtitleCues = timelineSubtitle?.show === false || !Array.isArray(timelineSubtitle?.cues)
-        ? null
-        : timelineSubtitle.cues.filter(
-          (cue) => String(cue?.text || '').trim()
-            && Number(cue?.endSeconds) > Number(cue?.startSeconds)
-        )
-      return {
-        storyboardId,
-        videoUrls: [videoUrl],
-        videoDurations: [videoDur],
-        audioUrls: audioUrl ? [audioUrl] : [],
-        audioDurations: audioUrl ? [audioDur] : [],
-        subtitle,
-        subtitleCues: subtitleCues?.length ? subtitleCues : null,
-        subtitleSourceMediaFingerprint: subtitleCues?.length
-          ? (timelineSubtitle?.sourceMediaFingerprint ?? null)
-          : null,
-        bgmUrl: null
-      }
-    })
-
-  const globalBgmUrl = persistableMediaUrl(timeline.bgm?.url) || undefined
-  return { groups, globalBgmUrl }
 }

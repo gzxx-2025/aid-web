@@ -1,5 +1,5 @@
-import type { CreationStepRequest, CreationStepState } from '~/types/business-api'
-import { creationStepStatus } from '~/utils/businessApi'
+import type { CreationStepRequest,CreationStepState } from '~/types/business-api';
+import { creationStepStatus } from '~/utils/businessApi';
 
 const inflightByKey = new Map<string, Promise<CreationStepState>>()
 const resultCache = new Map<string, { at: number; data: CreationStepState }>()

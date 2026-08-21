@@ -1,6 +1,6 @@
 import {
-  isComposeStoryboardVideoRecord,
-  isStoryboardRecordSelected
+isComposeStoryboardVideoRecord,
+isStoryboardRecordSelected
 } from '~/utils/storyboardRecordRow'
 
 type VideoRecordLike = {
@@ -117,13 +117,11 @@ export function resolvePreviewTimelineVideoUrl(
 }
 
 /**
- * 成品预览字幕文案：优先 subtitleText（清洗后「人物：说的话」），否则 dialogue 原文。
+ * 成品预览 / 本地同步字幕文案：只取列表清洗后的 subtitleText。
+ * 禁止回退 dialogue/dialogueText（含角色形象标注与引号，不宜直接上字幕轨）。
  */
 export function resolvePreviewSubtitleText(dub: {
   subtitleText?: string | null
-  dialogue?: string | null
 } | null | undefined): string {
-  const subtitle = String(dub?.subtitleText || '').trim()
-  if (subtitle) return subtitle
-  return String(dub?.dialogue || '').trim()
+  return String(dub?.subtitleText || '').trim()
 }

@@ -1,5 +1,5 @@
 import { userTaskResume } from '~/utils/businessApi'
-
+import { parseTaskResultPayload } from '~/utils/taskChainOutcome'
 /** SSE partial_failed / complete 批量结果中的失败项 */
 export interface TaskPartialFailedItem {
   batchIndex?: number
@@ -43,10 +43,16 @@ export interface TaskPartialFailedData {
   /** 兼容旧字段：第一批子任务 ID */
   chainChildTaskId?: number | null
   chainChildTaskType?: string | null
+  /** 提示词已完成，但合并接口的自动出图/出片提交失败 */
+  chainFailed?: boolean
+  chainMessage?: string
 }
 
 export function normUserTaskType(ty: unknown): string {
-  return String(ty ?? '').trim().toLowerCase().replace(/-/g, '_')
+  return String(ty ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, '_')
 }
 
 export function isUserTaskStatusPartialFailed(status: unknown): boolean {
@@ -58,14 +64,8 @@ export function isUserTaskStatusCancelled(status: unknown): boolean {
 }
 
 /** 用户手动取消且可调统一续生接口的任务 */
-export function isCancelledResumableTask(task: {
-  taskType?: unknown
-  status?: unknown
-}): boolean {
-  return (
-    isUserTaskStatusCancelled(task.status) &&
-    isPartialFailedResumableTaskType(task.taskType)
-  )
+export function isCancelledResumableTask(task: { taskType?: unknown; status?: unknown }): boolean {
+  return isUserTaskStatusCancelled(task.status) && isPartialFailedResumableTaskType(task.taskType)
 }
 
 /** 支持 POST /api/user/task/resume 续生的任务类型（与接口文档一致） */
@@ -178,8 +178,8 @@ export function resolveVideoBatchFailedStoryboardIds(
 }
 
 export function parseTaskPartialFailedData(data: unknown): TaskPartialFailedData | null {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return null
-  const o = data as Record<string, unknown>
+  const o = parseTaskResultPayload(data)
+  if (!o) return null
   const num = (v: unknown) => {
     const n = Number(v)
     return Number.isFinite(n) ? n : undefined
@@ -187,24 +187,16 @@ export function parseTaskPartialFailedData(data: unknown): TaskPartialFailedData
   const chainChildTaskIds = Array.isArray(o.chainChildTaskIds)
     ? [
         ...new Set(
-          o.chainChildTaskIds
-            .map((v) => Number(v))
-            .filter((n) => Number.isFinite(n) && n > 0)
+          o.chainChildTaskIds.map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0)
         )
       ]
     : undefined
   const chainChildTaskId = num(o.chainChildTaskId) ?? null
   const videoItems = parseVideoBatchSuccessItems(o)
   const recordIds = Array.isArray(o.recordIds)
-    ? [
-        ...new Set(
-          o.recordIds.map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0)
-        )
-      ]
+    ? [...new Set(o.recordIds.map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0))]
     : undefined
-  const shots = Array.isArray(o.shots)
-    ? (o.shots as TaskPartialFailedData['shots'])
-    : undefined
+  const shots = Array.isArray(o.shots) ? (o.shots as TaskPartialFailedData['shots']) : undefined
   return {
     totalCount: num(o.totalCount) ?? num(o.totalSubtasks),
     successCount: num(o.successCount),
@@ -221,6 +213,10 @@ export function parseTaskPartialFailedData(data: unknown): TaskPartialFailedData
     ...(chainChildTaskId != null ? { chainChildTaskId } : {}),
     ...(typeof o.chainChildTaskType === 'string'
       ? { chainChildTaskType: o.chainChildTaskType }
+      : {}),
+    ...(o.chainFailed === true ? { chainFailed: true } : {}),
+    ...(typeof o.chainMessage === 'string' && o.chainMessage.trim()
+      ? { chainMessage: o.chainMessage.trim() }
       : {})
   }
 }

@@ -34,3 +34,10 @@ export function isProbablyVideoUrl(url: string): boolean {
   if (/\/(?:video|videos|mp4)\//i.test(path)) return true
   return false
 }
+
+export function isProbablyImageUrl(url: string): boolean {
+  const raw = String(url || '').trim()
+  if (!raw) return false
+  const path = raw.split('?')[0]?.split('#')[0]?.toLowerCase() || ''
+  return /\.(png|jpe?g|webp|gif|bmp|svg)(\b|$)/.test(path)
+}

@@ -1,87 +1,19 @@
 import type { AssetCenterCategoryTreeVO, UserAssetRow } from '~/types/business-api'
-import { CREATION_FLOW_STEP_TITLE_MAP } from '~/utils/createFlowStepMeta'
 import {
   assetCenterItemToUserAssetRow,
   mergedAssetToUserAssetRow,
   userAssetCenterList,
   userAssetMergedPage
 } from '~/utils/businessApi'
+import {
+  CENTER_CATEGORY_TO_ASSET_TYPE,
+  DOCUMENT_KEY_TO_API_TYPE,
+  DOCUMENT_STRUCTURE,
+  MATERIAL_CATEGORY_ROWS
+} from './importAssetModalConfig'
 
-/** 素材库左侧/网格：与 ImportScriptModal materialCategories 一致 */
-export const MATERIAL_CATEGORY_ROWS: Array<{ key: string; label: string; apiType: string }> = [
-  { key: 'scene', label: '场景库', apiType: 'reference_scene' },
-  { key: 'character', label: '角色库', apiType: 'reference_character' },
-  { key: 'prop', label: '道具库', apiType: 'reference_prop' },
-  { key: 'file', label: '文件库', apiType: 'file' },
-  { key: 'pose', label: '姿势库', apiType: 'pose' },
-  { key: 'effect', label: '特效库', apiType: 'effect' },
-  { key: 'expression', label: '表情库', apiType: 'expression' },
-  /** 接口暂无独立类型时与 file 共用统计 */
-  { key: 'draft', label: '手绘稿库', apiType: 'file' },
-  { key: 'misc', label: '其他素材库', apiType: 'file' },
-  { key: 'style', label: '风格库', apiType: 'style' }
-]
-
-/** 本作品资产：文档节点 → center/list 的 categoryCode / assetType */
-export const DOCUMENT_STRUCTURE: Array<{ key: string; label: string; apiType: string }> = [
-  { key: 'global-setting', label: CREATION_FLOW_STEP_TITLE_MAP['global-setting'], apiType: 'file' },
-  { key: 'story-script', label: CREATION_FLOW_STEP_TITLE_MAP['story-script'], apiType: 'file' },
-  { key: 'scene-setting', label: '场景设定', apiType: 'scene' },
-  { key: 'character-setting', label: '角色设定', apiType: 'character' },
-  { key: 'prop-setting', label: '道具设定', apiType: 'prop' },
-  { key: 'scene-image', label: '场景图', apiType: 'scene' },
-  { key: 'character-image', label: '角色图', apiType: 'character' },
-  { key: 'prop-image', label: '道具图', apiType: 'prop' },
-  { key: 'storyboard-script', label: CREATION_FLOW_STEP_TITLE_MAP['storyboard-script'], apiType: 'file' },
-  { key: 'storyboard-image', label: '分镜图', apiType: 'file' },
-  { key: 'storyboard-video', label: CREATION_FLOW_STEP_TITLE_MAP['storyboard-video'], apiType: 'file' },
-  { key: 'dubbing', label: CREATION_FLOW_STEP_TITLE_MAP.dubbing, apiType: 'file' },
-  { key: 'preview', label: CREATION_FLOW_STEP_TITLE_MAP.preview, apiType: 'file' }
-]
-
-/** 资产中心 categoryCode → center/list 可选 assetType */
-export const CENTER_CATEGORY_TO_ASSET_TYPE: Record<string, string> = {
-  script: 'file',
-  role: 'character',
-  scene: 'scene',
-  prop: 'prop',
-  role_setting: 'character',
-  scene_setting: 'scene',
-  prop_setting: 'prop',
-  role_image: 'character',
-  scene_image: 'scene',
-  prop_image: 'prop',
-  storyboard_script: 'file',
-  storyboard_image: 'file',
-  storyboard_video: 'file',
-  dubbing: 'file',
-  preview_video: 'file',
-  global_setting: 'file'
-}
-
-/** 接口分类兜底（与 center/category/tree 出参 categoryCode 对齐） */
-export const CENTER_CATEGORY_FALLBACK: Array<{ categoryCode: string; categoryName: string }> = [
-  { categoryCode: 'script', categoryName: '剧本' },
-  { categoryCode: 'role', categoryName: '角色' },
-  { categoryCode: 'scene', categoryName: '场景' },
-  { categoryCode: 'prop', categoryName: '道具' },
-  { categoryCode: 'role_setting', categoryName: '角色设定' },
-  { categoryCode: 'scene_setting', categoryName: '场景设定' },
-  { categoryCode: 'prop_setting', categoryName: '道具设定' },
-  { categoryCode: 'role_image', categoryName: '角色图' },
-  { categoryCode: 'scene_image', categoryName: '场景图' },
-  { categoryCode: 'prop_image', categoryName: '道具图' },
-  { categoryCode: 'storyboard_script', categoryName: '分镜脚本' },
-  { categoryCode: 'storyboard_image', categoryName: '分镜图' },
-  { categoryCode: 'storyboard_video', categoryName: '分镜视频' },
-  { categoryCode: 'dubbing', categoryName: '配音' },
-  { categoryCode: 'preview_video', categoryName: '预览视频' }
-]
-
-/** 文档节点 key → API assetType */
-export const DOCUMENT_KEY_TO_API_TYPE: Record<string, string> = Object.fromEntries(
-  DOCUMENT_STRUCTURE.map((d) => [d.key, d.apiType])
-)
+export * from './importAssetModalConfig'
+export * from './importAssetModalTree'
 
 export function categoryCodeToApiType(categoryCode: string): string | undefined {
   return (
@@ -232,7 +164,8 @@ export async function fetchOfficialMaterialAllRows(
     return officialMaterialAllInflight
   }
 
-  const task = (async () => {
+  // 异步体首个 await 之后才回读 task 做在途校验，此时 const 已完成赋值
+  const task: Promise<UserAssetRow[]> = (async () => {
     const pageSize = 100
     let pageNum = 1
     let total = Infinity
@@ -251,15 +184,17 @@ export async function fetchOfficialMaterialAllRows(
       if (pageNum > 50) break
     }
 
-    if (officialMaterialAllInflight === task) {
-      officialMaterialAllCache.rows = all
-    }
     return all
   })()
 
   officialMaterialAllInflight = task
   try {
-    return await task
+    const all = await task
+    // 仍是当前在途任务才写缓存（force 重取可能已替换在途槽位）
+    if (officialMaterialAllInflight === task) {
+      officialMaterialAllCache.rows = all
+    }
+    return all
   } finally {
     if (officialMaterialAllInflight === task) {
       officialMaterialAllInflight = null
@@ -376,7 +311,7 @@ export async function fetchPersonalCenterAllRows(
     if (inflight) return inflight
   }
 
-  const task = (async () => {
+  const task: Promise<UserAssetRow[]> = (async () => {
     const pageSize = 100
     let pageNum = 1
     let total = Infinity
@@ -396,15 +331,17 @@ export async function fetchPersonalCenterAllRows(
       if (pageNum > 50) break
     }
 
-    if (personalCenterAllInflight.get(key) === task) {
-      personalCenterAllCache.set(key, all)
-    }
     return all
   })()
 
   personalCenterAllInflight.set(key, task)
   try {
-    return await task
+    const all = await task
+    // 仍是当前在途任务才写缓存（force 重取可能已替换在途槽位）
+    if (personalCenterAllInflight.get(key) === task) {
+      personalCenterAllCache.set(key, all)
+    }
+    return all
   } finally {
     if (personalCenterAllInflight.get(key) === task) {
       personalCenterAllInflight.delete(key)
@@ -481,91 +418,6 @@ export async function fetchPersonalRpsAsRows(
   const doc = DOCUMENT_STRUCTURE.find((d) => d.apiType === assetType)
   const categoryCode = doc?.key ?? assetType
   return fetchPersonalCenterRows(projectId, episodeId, categoryCode, assetType)
-}
-
-function isCategoryTreeNode(node: AssetCenterCategoryTreeVO): boolean {
-  const code = String(node.categoryCode ?? '').trim()
-  return code.length > 0
-}
-
-export function findAssetCenterProject(
-  tree: AssetCenterCategoryTreeVO[],
-  projectId: number
-): AssetCenterCategoryTreeVO | undefined {
-  const pid = Number(projectId)
-  if (!Number.isFinite(pid)) return undefined
-  return tree.find((p) => Number(p.projectId) === pid)
-}
-
-export function findAssetCenterEpisode(
-  projectNode: AssetCenterCategoryTreeVO | undefined,
-  episodeId: number
-): AssetCenterCategoryTreeVO | undefined {
-  const eid = Number(episodeId)
-  return projectNode?.children?.find((ep) => Number(ep.episodeId ?? 0) === eid)
-}
-
-/** 剧集节点展示名（与接口 VO 字段一致） */
-export function episodeDisplayLabel(ep: AssetCenterCategoryTreeVO): string {
-  return (
-    ep.episodeTitle ||
-    (ep.episodeNo != null ? `第${ep.episodeNo}集` : '电影')
-  )
-}
-
-/** 分类子节点（过滤无 categoryCode 的占位节点） */
-export function getEpisodeCategories(
-  episodeNode: AssetCenterCategoryTreeVO | undefined
-): AssetCenterCategoryTreeVO[] {
-  return (episodeNode?.children ?? []).filter(isCategoryTreeNode)
-}
-
-/** 节点 assetCount；分类层用自身计数，剧集层汇总子分类 */
-export function resolveNodeAssetCount(node: AssetCenterCategoryTreeVO): number | null {
-  if (typeof node.assetCount === 'number') return node.assetCount
-  const cats = getEpisodeCategories(node)
-  if (!cats.length) return null
-  let sum = 0
-  let has = false
-  for (const c of cats) {
-    if (typeof c.assetCount === 'number') {
-      sum += c.assetCount
-      has = true
-    }
-  }
-  return has ? sum : null
-}
-
-/** 当前作品：在分类树中定位项目 → 剧集节点（兼容项目下直接挂分类的两层结构） */
-export function resolveCurrentEpisodeNode(
-  tree: AssetCenterCategoryTreeVO[],
-  projectId: number,
-  episodeId: number
-): AssetCenterCategoryTreeVO | undefined {
-  const project = findAssetCenterProject(tree, projectId)
-  const children = project?.children ?? []
-  if (!children.length) return undefined
-
-  // 电影等：分类直接挂在项目下
-  if (children.some(isCategoryTreeNode)) {
-    return {
-      ...project!,
-      episodeId: Number.isFinite(episodeId) ? episodeId : 0,
-      children: children.filter(isCategoryTreeNode)
-    }
-  }
-
-  let hit = findAssetCenterEpisode(project, episodeId)
-  if (hit) return hit
-  if (episodeId === 0 || episodeId == null) {
-    hit =
-      project!.children!.find((c) => Number(c.episodeId ?? 0) === 0) ??
-      project!.children![0]
-  }
-  if (!hit && project!.children!.length === 1) {
-    hit = project!.children![0]
-  }
-  return hit
 }
 
 /** 分类文件夹数量：优先接口 assetCount，否则一次拉全量后按分类聚合（带缓存） */

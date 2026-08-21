@@ -73,7 +73,7 @@ html.app-shell-create .create-step-scp .prop-card-actions-header .ant-btn {
 html.app-shell-create .create-step-scp .asset-action-footer .ant-btn {
   padding: 0 8px;
   border-radius: 6px;
-  border: none;
+  border: none !important;
   background: none !important;
   color: rgba(230, 237, 243, 0.9);
   font-size: 14px;
@@ -83,11 +83,19 @@ html.app-shell-create .create-step-scp .asset-action-footer .ant-btn {
   justify-content: center;
   width: 33%;
   gap: 6px;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
-html.app-shell-create .create-step-scp .asset-action-footer .ant-btn:hover {
-  background: rgba(74, 231, 253, 0.16);
-  color: #e9fbff;
+html.app-shell-create .create-step-scp .asset-action-footer .ant-btn:hover,
+html.app-shell-create .create-step-scp .asset-action-footer .ant-btn:focus,
+html.app-shell-create .create-step-scp .asset-action-footer .ant-btn:focus-visible {
+  background: rgba(74, 231, 253, 0.16) !important;
+  color: #e9fbff !important;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 html.app-shell-create .create-step-scp .asset-action-footer .ant-btn .anticon {

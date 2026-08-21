@@ -1,5 +1,5 @@
-import type { LoginData, UserInfoFromApi } from '~/types/business-api'
-import type { User } from '~/types'
+import type { User } from '~/types';
+import type { LoginData,UserInfoFromApi } from '~/types/business-api';
 
 /** 将接口 userInfo 映射为前端 User（登录与 /api/user/profile 共用） */
 export function mapUserInfoFromApiToUser(

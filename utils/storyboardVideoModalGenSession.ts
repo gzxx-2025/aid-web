@@ -29,7 +29,7 @@ export function persistStoryboardVideoModalGenSession(
   extra?: { taskKind?: StoryboardVideoModalGenTaskKind; taskId?: number },
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     const prev = readStoryboardVideoModalGenSession(sessionScope)
     const taskIdRaw = extra?.taskId ?? prev?.taskId
@@ -65,7 +65,7 @@ export function markStoryboardVideoModalUserDismissed(
   storyboardId: number,
   sessionScope?: ModalGenSessionScope | null
 ) {
-  if (!import.meta.client) return
+  if (!(typeof window !== 'undefined')) return
   try {
     writeScopedSessionItem(
       STORYBOARD_VIDEO_MODAL_DISMISSED_KEY,
@@ -86,7 +86,7 @@ export function isStoryboardVideoModalUserDismissed(
   storyboardId: number,
   sessionScope?: ModalGenSessionScope | null
 ): boolean {
-  if (!import.meta.client) return false
+  if (!(typeof window !== 'undefined')) return false
   try {
     return (
       readScopedSessionItem(STORYBOARD_VIDEO_MODAL_DISMISSED_KEY, sessionScope) ===
@@ -100,7 +100,7 @@ export function isStoryboardVideoModalUserDismissed(
 export function readStoryboardVideoModalGenSession(
   sessionScope?: ModalGenSessionScope | null
 ): StoryboardVideoModalGenSession | null {
-  if (!import.meta.client) return null
+  if (!(typeof window !== 'undefined')) return null
   try {
     const raw = readScopedSessionItem(STORYBOARD_VIDEO_MODAL_GEN_SESSION_KEY, sessionScope)
     if (!raw) return null

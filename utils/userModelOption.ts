@@ -1,10 +1,10 @@
-import type { ModelOption } from '~/components/steps/ModelSelectDropdown.vue'
 import type { UserModelListItem } from '~/types/business-api'
+import type { ModelOption } from '~/types/modelAgentOptions'
 import { resolveModelSupportsAudio } from '~/utils/modelCapability'
 
 export type UserModelOptionSource = Pick<
   UserModelListItem,
-  'id' | 'modelCode' | 'modelName' | 'providerName' | 'providerLogo' | 'capability'
+  'id' | 'modelCode' | 'modelName' | 'providerName' | 'providerLogo' | 'capability' | 'isFree'
 >
 
 export interface MapUserModelOptionConfig {
@@ -30,7 +30,8 @@ export function mapUserModelListItemToModelOption(
     iconBg: config.iconBg ?? DEFAULT_ICON_BG,
     desc: item.providerName ? `服务商：${item.providerName}` : '',
     prices: config.includePrices ? [] : [],
-    supportsAudio: resolveModelSupportsAudio(item as UserModelListItem)
+    supportsAudio: resolveModelSupportsAudio(item as UserModelListItem),
+    isFree: item.isFree === true
   }
 }
 
@@ -44,7 +45,8 @@ export function mapUserModelListItemToPickerOption(item: UserModelListItem) {
     modelCode,
     name: String(item.modelName || modelCode || '未命名模型'),
     desc: provider || typeLabel || undefined,
-    logo: logo || undefined
+    logo: logo || undefined,
+    isFree: item.isFree === true
   }
 }
 

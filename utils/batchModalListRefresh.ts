@@ -1,10 +1,10 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
+import { applyStoryboardScriptPanelsFromApi } from '~/composables/useCreateFlowStoryboardSync'
 import { useCreationStore } from '~/stores/creation'
-import { resolveStoryScriptSaveContext } from '~/utils/storyScriptSaveContext'
+import type { StoryboardPanel } from '~/types'
+import type { RouteLikeLocation } from '~/types/routeLike'
 import { userStoryboardList } from '~/utils/businessApi'
 import { mapStoryboardListRowToPanel } from '~/utils/storyboardPanelMap'
-import { applyStoryboardScriptPanelsFromApi } from '~/composables/useCreateFlowStoryboardSync'
-import type { StoryboardPanel } from '~/types'
+import { resolveStoryScriptSaveContext } from '~/utils/storyScriptSaveContext'
 
 /**
  * 批量弹窗列表刷新约定（与 BatchGenerate*Modal 打开时机对齐）：
@@ -18,9 +18,10 @@ import type { StoryboardPanel } from '~/types'
  * 同步脚本 / 分镜视频 / 配音三处列表，避免外层列表操作后主图/主视频状态陈旧。
  */
 export async function refreshStoryboardPanelsFromApiForBatchModal(
-  route: RouteLocationNormalizedLoaded
+  route: RouteLikeLocation
 ): Promise<StoryboardPanel[] | null> {
-  const creationStore = useCreationStore()
+  // 非组件上下文，必须走 getState() 而不是 hook 调用
+  const creationStore = useCreationStore.getState()
   const ctx = await resolveStoryScriptSaveContext(creationStore, route)
   if (!ctx) return null
 

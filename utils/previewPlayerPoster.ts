@@ -1,4 +1,4 @@
-import { resolveStoryboardPanelCoverImage } from './storyboardImageCover.ts'
+import { resolveStoryboardPanelCoverImage } from './storyboardImageCover'
 
 export type PreviewPosterScriptPanel = {
   id?: number | string | null

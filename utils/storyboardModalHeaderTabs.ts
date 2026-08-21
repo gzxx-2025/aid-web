@@ -1,9 +1,9 @@
-import type { StoryboardRecordListType, StoryboardRecordRow } from '~/types/business-api'
+import type { StoryboardRecordListType,StoryboardRecordRow } from '~/types/business-api'
 import { groupStoryboardRecordsByStoryboardId } from '~/utils/storyboardRecordBatch'
 import {
-  isComposeStoryboardVideoRecord,
-  isOriginalStoryboardVideoRecord,
-  isStoryboardRecordSelected
+isComposeStoryboardVideoRecord,
+isOriginalStoryboardVideoRecord,
+isStoryboardRecordSelected
 } from '~/utils/storyboardRecordRow'
 
 export interface StoryboardModalSceneMeta {

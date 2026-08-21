@@ -107,7 +107,7 @@ export function htmlToPlainPreserveLineBreaks(html: string): string {
 }
 
 function htmlToMarkdownViaRegex(html: string): string {
-  let s = html
+  const s = html
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
     .replace(/<\/div>\s*<div[^>]*>/gi, '\n\n')

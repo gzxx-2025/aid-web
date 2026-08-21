@@ -18,7 +18,8 @@ html[data-viewport-compact-scale='1'].app-shell-login body {
   min-height: calc(100vh / 0.75) !important;
 }
 
-html[data-viewport-compact-scale='1'] .home-page {
+html[data-viewport-compact-scale='1'] .home-page,
+html[data-viewport-compact-scale='1'] .home-new-page {
   height: calc(100vh / 0.75) !important;
   min-height: calc(100vh / 0.75) !important;
 }

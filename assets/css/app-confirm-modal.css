@@ -80,10 +80,14 @@
 
 /* 预览全屏：压过 app-confirm-modal 圆角，贴边铺满 */
 .ant-modal-wrap.image-preview-modal-wrap .ant-modal.app-confirm-modal .ant-modal-content,
+.ant-modal-wrap.image-preview-modal-wrap .ant-modal.app-confirm-modal .ant-modal-container,
 .ant-modal-wrap.image-gallery-preview-modal-wrap .ant-modal.app-confirm-modal .ant-modal-content,
-.ant-modal-wrap.video-preview-modal-wrap .ant-modal.app-confirm-modal .ant-modal-content {
+.ant-modal-wrap.image-gallery-preview-modal-wrap .ant-modal.app-confirm-modal .ant-modal-container,
+.ant-modal-wrap.video-preview-modal-wrap .ant-modal.app-confirm-modal .ant-modal-content,
+.ant-modal-wrap.video-preview-modal-wrap .ant-modal.app-confirm-modal .ant-modal-container {
   border-radius: 0 !important;
   box-shadow: none !important;
+  padding: 0 !important;
 }
 
 .app-confirm-wrap .ant-modal-confirm-body,

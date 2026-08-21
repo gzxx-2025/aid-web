@@ -1,5 +1,5 @@
-import type QuillType from 'quill'
 import { EmbedBlot } from 'parchment'
+import type QuillType from 'quill'
 import type { PromptParamRefValue } from '~/utils/storyboardPromptParamRef'
 import { readPromptParamRefFromNode } from '~/utils/storyboardPromptParamRef'
 
